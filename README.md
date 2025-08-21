@@ -13,3 +13,6 @@ usarlas
 
 ## Nota:
 Este documento cambiará constantemente a medida que se creen o editen las macros
+
+### Autores
+Fernando Dorantes Nieto
