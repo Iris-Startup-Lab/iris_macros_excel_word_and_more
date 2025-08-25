@@ -60,12 +60,10 @@ Sub EnviarCorreosconCalendario()
     Dim OutlookMail As Object
     Dim doc As Document
     Dim campoCorreo As String
-    Dim oAccount As Object ' Para la cuenta de Outlook a usar
-    Dim oAccounts As Object ' Colección de cuentas de Outlook
-    Dim strAccounts As String ' Lista de cuentas para mostrar al usuario
-    Dim selectedAccountEmail As String ' Email de la cuenta seleccionada
-    Dim accountFound As Boolean
-    Dim cuerpoMensaje As String
+    Dim htmlMensaje As String
+    Dim tempHTMLFile As String
+    Dim FSO As Object ' Declara la variable
+    Dim ts As Object
 
     If rutaICS = "" Or asuntoCorreo = "" Then
         MsgBox "Primero debes ejecutar 'PrepararEnvioConICS'.", vbExclamation
@@ -73,45 +71,6 @@ Sub EnviarCorreosconCalendario()
     End If
 
     Set OutlookApp = CreateObject("Outlook.Application")
-
-    ' Obtener las cuentas de Outlook configuradas
-    Set oAccounts = OutlookApp.Session.Accounts
-    If oAccounts.Count = 0 Then
-        MsgBox "No se encontraron cuentas de Outlook configuradas.", vbCritical
-        Exit Sub
-    End If
-
-    ' Si hay más de una cuenta, preguntar al usuario cuál usar
-    If oAccounts.Count > 1 Then
-        ' Construir la lista de cuentas para mostrar en el InputBox
-        For Each oAccount In oAccounts
-            strAccounts = strAccounts & oAccount.SmtpAddress & vbCrLf
-        Next
-
-        selectedAccountEmail = InputBox("Por favor, escribe o copia la dirección de correo de la cuenta que deseas usar para enviar:" & vbCrLf & vbCrLf & strAccounts, "Seleccionar Cuenta de Envío")
-
-        If selectedAccountEmail = "" Then
-            MsgBox "No se seleccionó ninguna cuenta. Operación cancelada.", vbExclamation
-            Exit Sub
-        End If
-
-        ' Encontrar el objeto de la cuenta seleccionada
-        For Each oAccount In oAccounts
-            If LCase(oAccount.SmtpAddress) = LCase(selectedAccountEmail) Then
-                accountFound = True
-                Exit For
-            End If
-        Next
-
-        If Not accountFound Then
-            MsgBox "La cuenta de correo '" & selectedAccountEmail & "' no fue encontrada. Por favor, verifica la dirección e inténtalo de nuevo.", vbCritical
-            Exit Sub
-        End If
-    Else
-        ' Si solo hay una cuenta, usarla por defecto
-        Set oAccount = oAccounts(1)
-    End If
-
     Set doc = ActiveDocument
 
     With doc.MailMerge
@@ -123,27 +82,49 @@ Sub EnviarCorreosconCalendario()
         For i = 1 To .DataSource.RecordCount
             .DataSource.ActiveRecord = i
             campoCorreo = .DataSource.DataFields("Correo").Value
-            cuerpoMensaje = doc.Content.Text
+            
+            tempHTMLFile = Environ("temp") & "\temp_mail_body.htm"
+            
+            ' ¡IMPORTANTE! Inicializa el objeto FSO aquí
+            Set FSO = CreateObject("Scripting.FileSystemObject")
+            
+            On Error Resume Next ' Ignora errores si no se puede guardar el archivo
+            doc.SaveAs2 tempHTMLFile, wdFormatHTML
+            On Error GoTo 0
+            
+            ' Verifica si el archivo se creó antes de continuar
+            If FSO.FileExists(tempHTMLFile) Then
+                ' Lee el contenido del archivo HTML
+                Set ts = FSO.OpenTextFile(tempHTMLFile, 1)
+                htmlMensaje = ts.ReadAll
+                ts.Close
+                
+                ' Libera el objeto FSO antes de salir del bucle
+                Set FSO = Nothing
+                
+                Set OutlookMail = OutlookApp.CreateItem(0)
+                With OutlookMail
+                    .To = campoCorreo
+                    .Subject = asuntoCorreo
+                    .HTMLBody = htmlMensaje
+                    .Attachments.Add rutaICS
 
-            Set OutlookMail = OutlookApp.CreateItem(0)
-            With OutlookMail
-                ' Especificar la cuenta desde la que se enviará el correo
-                Set .SendUsingAccount = oAccount
+                    If rutasImagenes(0) <> "" Then
+                        For j = LBound(rutasImagenes) To UBound(rutasImagenes)
+                            .Attachments.Add rutasImagenes(j)
+                        Next j
+                    End If
 
-                .To = campoCorreo
-                .Subject = asuntoCorreo
-                .Body = cuerpoMensaje
-                .Attachments.Add rutaICS
-
-                ' Adjuntar imágenes si hay
-                If rutasImagenes(0) <> "" Then
-                    For j = LBound(rutasImagenes) To UBound(rutasImagenes)
-                        .Attachments.Add rutasImagenes(j)
-                    Next j
-                End If
-
-                .Send
-            End With
+                    .Send
+                End With
+                
+                On Error Resume Next
+                Kill tempHTMLFile
+                On Error GoTo 0
+            Else
+                MsgBox "No se pudo crear el archivo HTML temporal para el correo. Verifique los permisos.", vbExclamation
+            End If
+            
         Next i
     End With
 
