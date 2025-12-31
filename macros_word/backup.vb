@@ -31,6 +31,7 @@ Sub PrepararEnvioConICS()
         Exit Sub
     End If
 
+    ' Seleccionar imágenes opcionales
     Set dlgImagenes = Application.FileDialog(msoFileDialogFilePicker)
     With dlgImagenes
         .Title = "Selecciona una o más imágenes para adjuntar (opcional)"
@@ -50,12 +51,11 @@ Sub PrepararEnvioConICS()
         End If
     End With
 
-
-    MsgBox "Archivo .ics, imágenes y asunto listos." & vbCrLf & "Asegúrate de que las imágenes que quieres pegar aparte estén en el cuerpo de este documento." & vbCrLf & "Ahora puedes ejecutar el envío.", vbInformation
+    MsgBox "Archivo .ics, asunto y adjuntos listos. Ahora puedes ejecutar el envío.", vbInformation
 End Sub
 
 Sub EnviarCorreosconCalendario()
-    Dim i As Long
+    Dim i As Long, j As Integer
     Dim OutlookApp As Object
     Dim OutlookMail As Object
     Dim doc As Document
@@ -65,9 +65,8 @@ Sub EnviarCorreosconCalendario()
     Dim strAccounts As String ' Lista de cuentas para mostrar al usuario
     Dim selectedAccountEmail As String ' Email de la cuenta seleccionada
     Dim accountFound As Boolean
-    Dim j As Integer
-    Dim bodyHTML As String
-    Dim tempFile As String, tempFolder As String, fso As Object, ts As Object, tempDoc As Document
+    Dim fromAddress As String ' Dirección de remitente personalizada
+    Dim wordEdit As Object ' Word.Document
 
     If rutaICS = "" Or asuntoCorreo = "" Then
         MsgBox "Primero debes ejecutar 'PrepararEnvioConICS'.", vbExclamation
@@ -75,41 +74,31 @@ Sub EnviarCorreosconCalendario()
     End If
 
     Set OutlookApp = CreateObject("Outlook.Application")
+    On Error GoTo MailError
     Set doc = ActiveDocument
 
-    ' --- Convertir el cuerpo del documento de Word a HTML ---
-    ' Este método es más robusto que usar .GetInspector.WordEditor,
-    ' ya que no depende de que Word sea el editor de correo predeterminado en Outlook.
-    On Error GoTo ConversionError
-    Set fso = CreateObject("Scripting.FileSystemObject")
+    ' --- PASO CRÍTICO: Asegurar que todas las imágenes estén incrustadas ---
+    ' Recorremos todas las imágenes del documento y rompemos cualquier vínculo externo.
+    ' Esto garantiza que las imágenes son parte del documento y pueden ser
+    ' correctamente convertidas a HTML e incrustadas en el correo.
+    Dim oShape As Shape
+    Dim oInlineShape As InlineShape
 
-    ' Crear un documento temporal para no alterar el original
-    doc.Content.Copy
-    Set tempDoc = Documents.Add(Visible:=False)
-    tempDoc.Content.Paste
+    For Each oInlineShape In doc.InlineShapes
+        If Not oInlineShape.LinkFormat Is Nothing Then
+            If oInlineShape.LinkFormat.Type = wdLinkTypePicture Then
+                oInlineShape.LinkFormat.BreakLink
+            End If
+        End If
+    Next oInlineShape
 
-    ' Definir rutas para el archivo HTML temporal y su carpeta de soporte
-    tempFile = fso.GetSpecialFolder(2).Path & "\word_mail_body.htm" ' 2 = TempFolder
-    tempFolder = fso.GetParentFolderName(tempFile) & "\" & fso.GetBaseName(tempFile) & "_files"
+    For Each oShape In doc.Shapes
+        If oShape.Type = msoLinkedPicture Then
+            oShape.LinkFormat.BreakLink
+        End If
+    Next oShape
 
-    ' Guardar el documento temporal como HTML filtrado
-    tempDoc.SaveAs2 FileName:=tempFile, FileFormat:=10 ' wdFormatFilteredHTML
-    tempDoc.Close SaveChanges:=0 ' wdDoNotSaveChanges
-
-    ' Leer el contenido del archivo HTML
-    Set ts = fso.OpenTextFile(tempFile, 1) ' ForReading
-    bodyHTML = ts.ReadAll
-    ts.Close
-
-    ' Limpiar los archivos temporales
-    fso.DeleteFile tempFile, True
-    If fso.FolderExists(tempFolder) Then
-        fso.DeleteFolder tempFolder, True
-    End If
-    Set fso = Nothing
-    On Error GoTo 0
-
-    ' --- Lógica para seleccionar la cuenta de envío ---
+    ' Obtener las cuentas de Outlook configuradas
     Set oAccounts = OutlookApp.Session.Accounts
     If oAccounts.Count = 0 Then
         MsgBox "No se encontraron cuentas de Outlook configuradas.", vbCritical
@@ -123,7 +112,7 @@ Sub EnviarCorreosconCalendario()
             strAccounts = strAccounts & oAccount.SmtpAddress & vbCrLf
         Next
 
-        selectedAccountEmail = InputBox("Por favor, escribe la dirección de correo de la cuenta que deseas usar para enviar:" & vbCrLf & vbCrLf & strAccounts, "Seleccionar Cuenta de Envío")
+        selectedAccountEmail = InputBox("Por favor, escribe o copia la dirección de correo de la cuenta que deseas usar para enviar:" & vbCrLf & vbCrLf & strAccounts, "Seleccionar Cuenta de Envío")
 
         If selectedAccountEmail = "" Then
             MsgBox "No se seleccionó ninguna cuenta. Operación cancelada.", vbExclamation
@@ -131,7 +120,6 @@ Sub EnviarCorreosconCalendario()
         End If
 
         ' Encontrar el objeto de la cuenta seleccionada
-        accountFound = False
         For Each oAccount In oAccounts
             If LCase(oAccount.SmtpAddress) = LCase(selectedAccountEmail) Then
                 accountFound = True
@@ -147,7 +135,12 @@ Sub EnviarCorreosconCalendario()
         ' Si solo hay una cuenta, usarla por defecto
         Set oAccount = oAccounts(1)
     End If
-    ' --- Fin de la lógica de selección de cuenta ---
+
+    ' Preguntar por una dirección de remitente personalizada (opcional)
+    fromAddress = InputBox("OPCIONAL: Escribe la dirección que quieres que aparezca como remitente (ej: 'soporte@empresa.com')." & vbCrLf & vbCrLf & _
+                           "Déjalo en blanco para usar la cuenta seleccionada (" & oAccount.SmtpAddress & ")." & vbCrLf & vbCrLf & _
+                           "IMPORTANTE: Tu cuenta debe tener permisos de 'Enviar como' o 'Enviar en nombre de' para que esto funcione.", _
+                           "Remitente Personalizado (De/From)")
 
     With doc.MailMerge
         If .MainDocumentType <> wdEMail Then
@@ -155,47 +148,59 @@ Sub EnviarCorreosconCalendario()
             Exit Sub
         End If
 
+        ' --- MÉTODO DIRECTO: Copiar el contenido del documento ---
+        ' Copiamos el contenido una sola vez antes de empezar el bucle.
+        doc.Content.Copy
+
         For i = 1 To .DataSource.RecordCount
             .DataSource.ActiveRecord = i
             campoCorreo = .DataSource.DataFields("Correo").Value
+            
+            ' --- Validación: Saltar si el campo de correo está vacío ---
+            If Trim(campoCorreo) <> "" Then
+                Set OutlookMail = OutlookApp.CreateItem(0)
+                
+                With OutlookMail
+                    ' Especificar la cuenta desde la que se enviará el correo
+                    Set .SendUsingAccount = oAccount
 
-            Set OutlookMail = OutlookApp.CreateItem(0)
-            With OutlookMail
-                ' Especificar la cuenta desde la que se enviará el correo
-                Set .SendUsingAccount = oAccount
+                    ' Si el usuario especificó una dirección "De/From" personalizada, la usamos.
+                    ' Esto requiere permisos de "Enviar como" o "Enviar en nombre de".
+                    If fromAddress <> "" Then
+                        .SentOnBehalfOfName = fromAddress
+                    End If
 
-                .To = campoCorreo
-                .Subject = asuntoCorreo
-                .Attachments.Add rutaICS
+                    .To = campoCorreo
+                    .Subject = asuntoCorreo
+                    .Attachments.Add rutaICS
 
-                ' Adjuntar imágenes opcionales
-                If rutasImagenes(0) <> "" Then
-                    For j = LBound(rutasImagenes) To UBound(rutasImagenes)
-                        .Attachments.Add rutasImagenes(j)
-                    Next j
-                End If
+                    ' --- REORDENAMIENTO CRÍTICO ---
+                    ' 1. Primero mostramos el correo (.Display). Esto crea la ventana y el editor.
+                    ' 2. LUEGO, obtenemos acceso al editor y pegamos el contenido.
+                    ' Intentar acceder al editor ANTES de mostrar la ventana causa el "Error en la operación".
+                    .Display
 
-                ' Establecer el cuerpo del correo usando el HTML generado.
-                ' Outlook incrustará automáticamente las imágenes referenciadas en el HTML.
-                .HTMLBody = bodyHTML
+                    Set wordEdit = .GetInspector.WordEditor
+                    wordEdit.Content.PasteAndFormat wdFormatOriginalFormatting
 
-                ' Para probar, puedes usar .Display en lugar de .Send para ver el correo antes de enviarlo.
-                ' .Display
-                .Send
-            End With
-            Set OutlookMail = Nothing
+                    ' Adjuntar imágenes si hay
+                    If rutasImagenes(0) <> "" Then
+                        For j = LBound(rutasImagenes) To UBound(rutasImagenes)
+                            .Attachments.Add rutasImagenes(j)
+                        Next j
+                    End If
+
+                    ' 3. Enviar el correo. La ventana que se mostró se cerrará automáticamente.
+                    .Send
+                End With
+            End If
         Next i
     End With
 
     MsgBox "Correos enviados exitosamente.", vbInformation
     Exit Sub
 
-ConversionError:
-    MsgBox "Ocurrió un error al convertir el contenido del documento a HTML:" & vbCrLf & Err.Description, vbCritical
-    On Error Resume Next
-    If Not tempDoc Is Nothing Then tempDoc.Close SaveChanges:=0
-    If Not fso Is Nothing Then
-        If Len(tempFile) > 0 And fso.FileExists(tempFile) Then fso.DeleteFile tempFile, True
-        If Len(tempFolder) > 0 And fso.FolderExists(tempFolder) Then fso.DeleteFolder tempFolder, True
-    End If
+MailError:
+    MsgBox "Ocurrió un error inesperado durante la creación de los correos:" & vbCrLf & Err.Description, vbCritical
+    Set OutlookApp = Nothing
 End Sub
