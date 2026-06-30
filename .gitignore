@@ -4,6 +4,7 @@
 *.tsv
 *.xls
 *.xlsx
+*.xlsm
 *.log
 *.pot
 .vscode/
