@@ -17,9 +17,7 @@ Sub suma()
     ultimaFila = Cells(Rows.Count, "A").End(xlUp).Row
     subtotalGeneral = 0
 
-    ' =============================
-    ' ?? 1. SUMA POR BLOQUES
-    ' =============================
+ 
     For i = 1 To ultimaFila
 
         texto = Trim(Cells(i, "A").Value)
@@ -57,25 +55,22 @@ Continuar:
 
     Next i
 
-    ' =============================
-    ' ?? 2. SUBTOTAL / IVA / TOTAL
-    ' =============================
     For Each celdaTexto In Range("I1:I" & ultimaFila)
 
-        ' ?? LIMPIAR TEXTO (clave)
+        
         textoCelda = UCase(Replace(Trim(celdaTexto.Value), ".", ""))
 
-        ' ? SUBTOTAL
+        
         If InStr(textoCelda, "SUBTOTAL") > 0 Then
             Cells(celdaTexto.Row, "K").Value = subtotalGeneral
         End If
 
-        ' ? IVA (YA FUNCIONA BIEN)
+        
         If InStr(textoCelda, "IVA") > 0 Then
             Cells(celdaTexto.Row, "K").Value = subtotalGeneral * 0.16
         End If
 
-        ' ? TOTAL FINAL
+       
         If InStr(textoCelda, "TOTAL") > 0 Then
 
             valorIVA = 0

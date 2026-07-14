@@ -2,7 +2,6 @@
 ' Javier Flores Martinez
 Sub GenerarPDF()
 
-
     Dim ruta As String
 
     ruta = ThisWorkbook.Path & "\Cotizacion.pdf"

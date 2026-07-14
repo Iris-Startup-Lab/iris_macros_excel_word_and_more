@@ -1,3 +1,5 @@
+' Autores: Azeneth Guadalupe Garcia Mendez
+' Javier Flores Martinez
 Sub GenerarPDFNombreInteligente()
 
     Dim ruta As String
