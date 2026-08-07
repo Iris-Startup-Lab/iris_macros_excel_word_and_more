@@ -4,6 +4,8 @@ Sub AgregarFilaProducto()
 
     Dim filaDestino As Long
 
+    FijarBotones            ' los botones no se mueven al insertar la fila
+
     filaDestino = ActiveCell.Row + 1
 
     Rows(filaDestino).Insert Shift:=xlDown
@@ -14,5 +16,7 @@ Sub AgregarFilaProducto()
     Rows(filaDestino).PasteSpecial Paste:=xlPasteFormulas
 
     Application.CutCopyMode = False
+
+    RestaurarPosicionesBotones
 
 End Sub

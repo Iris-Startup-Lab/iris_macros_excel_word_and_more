@@ -23,8 +23,14 @@ Public Sub GenerarPDFsCotizacion()
         Exit Sub
     End If
 
-    ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto.
+    ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto
+    ' (si el usuario lo borró, aquí se reimprime el mismo antes de exportar).
     AsegurarUUIDCotizacion
+
+    ' Ocultar filas para el Resumen aplasta/mueve los objetos atados a celdas:
+    ' los anclamos y los devolvemos a su panel antes de exportar.
+    FijarBotones ws
+    RestaurarPosicionesBotones
 
     Dim cliente As String, proyecto As String, uuid As String
     Dim version As String, fechaCot As String

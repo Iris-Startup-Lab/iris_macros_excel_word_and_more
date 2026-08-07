@@ -24,6 +24,7 @@ Guía paso a paso para instalar y usar las macros de:
 - [8. Estructura de un bloque (referencia)](#8-estructura-de-un-bloque-referencia)
 - [9. Solución de problemas](#9-solución-de-problemas)
 - [10. Pruebas de verificación](#10-pruebas-de-verificación)
+- [11. Blindaje: botones fijos, ID irrompible, una sola hoja](#11-blindaje-botones-fijos-id-irrompible-una-sola-hoja)
 - [Apéndice A. Lista de macros](#apéndice-a-lista-de-macros)
 - [Apéndice B. Celdas y hojas usadas](#apéndice-b-celdas-y-hojas-usadas)
 
@@ -294,6 +295,14 @@ Fila 13    ┃ SUMA TOTAL:            215,500 ← cierre del bloque
 | El PDF sale con filas de más/menos | Marcas de detalle mal puestas | Revisa qué filas tienen `D` (muestra col. O), corrige y regenera. |
 | "No se encontró la hoja de Cotización" | Se renombró la hoja | La macro busca una hoja cuyo nombre contenga "COTIZACI"; no le quites esa palabra. |
 | Excel avisa que hay una hoja oculta `Meta` | Es normal | No la borres: ahí se guarda el UUID. Está muy oculta a propósito. |
+| Los botones se corren encima de la cotización | Objetos atados a las celdas (`xlMoveAndSize`) | Corre `BlindarLibro` una vez (paso 11.2). Para arreglarlo al momento: **Reacomodar botones**. |
+| Hay botones repetidos | Los generó `AgregarFilaItem` (`Rows.Copy` + `Insert`) antes del blindaje | Ejecuta `LimpiarBotonesDuplicados`. |
+| No puedo mover un botón a propósito | El blindaje protege los objetos de dibujo | Ejecuta `DesblindarLibro`, muévelo, y luego `GuardarPosicionesBotones`. |
+| `K4` se borra y reaparece con un aviso | Es el comportamiento esperado | El ID no se edita a mano: vive en la hoja `Meta` y se reimprime igual. |
+| `K4` queda vacío y no vuelve | `C4` (proyecto) está vacío | Sin proyecto no hay ID. Escribe el proyecto en `C4`. |
+| No puedo insertar/copiar/renombrar hojas | Estructura del libro protegida (a propósito) | Para una cotización nueva, duplica el **archivo** `.xlsm`. Si de verdad necesitas tocar hojas: `DesblindarLibro`. |
+| Error al ejecutar una macro tras proteger el libro a mano | La contraseña manual no coincide con `PWD_BLINDAJE` | Usa la **misma** contraseña en los dos lados (paso 11.4). |
+| "Sub o Function no definida: `FijarBotones`" | Falta importar `blindaje_botones.bas` | Impórtalo (paso 11.1): las macros de estructura ya lo llaman. |
 
 ---
 
@@ -317,6 +326,122 @@ Si los 6 pasos funcionan, la instalación está completa.
 
 ---
 
+## 11. Blindaje: botones fijos, ID irrompible, una sola hoja
+
+Esta parte resuelve tres cosas que se rompían en el uso diario:
+
+1. Los botones **se movían solos** encima de la cotización.
+2. Si alguien **borraba el ID Cotización** (`K4`), ya no volvía.
+3. Cualquiera podía **crear o copiar hojas** de cotización.
+
+### 11.1 Instalar el módulo de blindaje
+
+1. `Alt + F11` → `Archivo > Importar archivo...` → **`bas/blindaje_botones.bas`**.
+   (En la carpeta *Módulos* debe aparecer `M_Blindaje`.)
+2. Abre `eventos_uuid.vb`, y **reemplaza por completo** el código que hoy tienen:
+   - **BLOQUE A** → todo el contenido de `ThisWorkbook`.
+   - **BLOQUE B** → todo el contenido del objeto de la hoja `Cotización `.
+3. Vuelve a importar `bas/asignar_uuid_cotizacion.bas`. Si ya existía el módulo,
+   VBA creará `M_UUID1`: **borra el viejo** (clic derecho > *Quitar M_UUID*, y
+   di **No** cuando pregunte si quieres exportarlo) y renombra el nuevo a `M_UUID`
+   en la ventana *Propiedades* (`F4`).
+4. Vuelve a importar también `bas/esquema_categorias.bas` y
+   `bas/generar_pdfs_resumen_detalle.bas` con el mismo criterio.
+5. Guarda como `.xlsm`.
+
+### 11.2 Acomodar los botones y "sacarles la foto" (una sola vez)
+
+1. En la hoja `Cotización`, arrastra los botones hasta dejarlos **exactamente**
+   donde quieres que vivan para siempre (el panel a la derecha del área
+   imprimible, fuera de las columnas A:N).
+2. `Alt + F8` → ejecuta **`BlindarLibro`**.
+
+Eso hace todo de un golpe:
+
+- Ancla cada objeto (`No mover ni cambiar tamaño con las celdas`).
+- Guarda su posición en la hoja `Meta`.
+- Asegura el ID Cotización.
+- Protege la estructura del libro.
+
+3. **Guarda el archivo.** Listo: de aquí en adelante se mantiene solo.
+
+> **Cambia la contraseña.** En el módulo `M_Blindaje`, primera línea:
+> `Public Const PWD_BLINDAJE As String = "AE2026"`. Ponla la de tu equipo y
+> **anótala**: sin ella no se puede desproteger el libro.
+
+### 11.3 Botones nuevos recomendados
+
+| Texto del botón | Macro a asignar | Para qué sirve |
+|---|---|---|
+| **Reacomodar botones** | `RestaurarPosicionesBotones` | Si algo se movió, los regresa a su lugar. |
+| **Limpiar botones de más** | `LimpiarBotonesDuplicados` | Borra los botones duplicados por macros viejas. |
+
+> Después de agregar cualquier botón nuevo, vuelve a ejecutar
+> **`GuardarPosicionesBotones`** para que entre al registro. Si no lo haces,
+> `LimpiarBotonesDuplicados` lo va a proponer para borrar.
+
+### 11.4 Cómo hacerlo a mano (Excel nativo, sin macros)
+
+Si quieres el equivalente manual o entender qué hace la macro:
+
+**Botones que no se mueven:**
+
+1. Selecciona el botón (clic derecho; si son varios, mantén `Ctrl`).
+2. **Formato de control** > pestaña **Propiedades**.
+3. Marca **No mover ni cambiar tamaño con las celdas**.
+4. Repite en cada botón. *(Esto es lo que hace `FijarBotones`.)*
+
+**Botones que no se pueden arrastrar:**
+
+- Pestaña **Revisar > Proteger hoja**, deja **desmarcada** la casilla de
+  contenido y marca **Editar objetos**… en la práctica es más simple dejar que lo
+  haga `BloquearBotones`, que protege *solo* los objetos y deja las celdas
+  totalmente editables.
+
+**No crear más hojas:**
+
+- Pestaña **Revisar > Proteger libro** > marca **Estructura** > pon contraseña.
+- Con eso Excel apaga *Insertar hoja*, *Eliminar hoja*, *Mover o copiar hoja*,
+  *Cambiar nombre* y *Ocultar/Mostrar hoja*.
+- **Importante:** si lo haces a mano, usa la **misma contraseña** que
+  `PWD_BLINDAJE`, o las macros no podrán desproteger cuando lo necesiten.
+
+**Que el ID no se borre:** esto **no tiene equivalente nativo** razonable. Se
+podría bloquear `K4` con *Proteger hoja*, pero entonces habría que desbloquear
+celda por celda todo lo que sí se captura, y las macros de insertar filas se
+complican. Por eso se resolvió con el evento `Worksheet_Change`.
+
+### 11.5 Qué esperar en el uso diario
+
+- **Botones:** se quedan quietos. Si por alguna razón se corren, clic en
+  *Reacomodar botones*.
+- **ID Cotización:** si lo borras o lo pisas, aparece un aviso y **regresa el
+  mismo ID** (no uno nuevo). Solo queda vacío si `C4` (proyecto) está vacío.
+- **Hojas:** al intentar insertar o copiar una hoja, Excel no te deja; si por
+  algún camino se crea, se borra sola con un mensaje.
+- **Para una cotización nueva:** duplica el **archivo** `.xlsm`, no la hoja. Un
+  archivo = una cotización = un ID.
+
+### 11.6 Pruebas de verificación del blindaje
+
+1. **Botón anclado:** párate en una fila de un bloque y usa *Agregar producto*.
+   → los botones **no** se mueven ni se duplican.
+2. **Reacomodo:** ejecuta `DesblindarLibro`, arrastra un botón al centro de la
+   cotización, y ejecuta `RestaurarPosicionesBotones`. → regresa a su panel.
+3. **Botón bloqueado:** intenta arrastrar un botón con el blindaje puesto.
+   → Excel no lo permite, pero al hacer clic **sí ejecuta su macro**.
+4. **ID borrado:** selecciona `K4` y presiona `Supr`. → aviso y el **mismo** ID
+   de vuelta.
+5. **ID pisado:** escribe `HOLA` en `K4`. → aviso y el ID correcto de vuelta.
+6. **Hoja nueva:** clic derecho en una pestaña > *Insertar*. → Excel lo tiene
+   deshabilitado.
+7. **Copia de hoja:** clic derecho en `Cotización` > *Mover o copiar*.
+   → deshabilitado.
+8. **Persistencia:** guarda, cierra, reabre. → todo sigue blindado y `K4` con su
+   ID.
+
+---
+
 ## Apéndice A. Lista de macros
 
 | Macro | Módulo | Qué hace |
@@ -331,8 +456,23 @@ Si los 6 pasos funcionan, la instalación está completa.
 | `MarcarComoDetalle` | `esquema_categorias` | Marca filas seleccionadas como detalle. |
 | `QuitarMarcaDetalle` | `esquema_categorias` | Quita la marca de detalle. |
 | `GenerarPDFsCotizacion` | `generar_pdfs_resumen_detalle` | Genera los 2 PDF. |
-| `Workbook_Open` | `ThisWorkbook` (evento) | Asegura el UUID al abrir. |
-| `Worksheet_Change` | Hoja Cotización (evento) | Revisa el UUID al cambiar `C4`. |
+| `VigilarIDCotizacion` | `asignar_uuid_cotizacion` | Repone `K4` si lo borran o lo editan (lo llama el evento). |
+| `RestaurarIDSiFalta` | `asignar_uuid_cotizacion` | Red de seguridad silenciosa: repone `K4` sin preguntar. |
+| `UUIDGuardado` | `asignar_uuid_cotizacion` | Lee el UUID de la hoja `Meta` sin generar nada. |
+| `BlindarLibro` | `blindaje_botones` | **Puesta en marcha:** ancla y registra botones, asegura el ID, protege la estructura. |
+| `DesblindarLibro` | `blindaje_botones` | Retira el blindaje para mantenimiento. |
+| `FijarBotones` | `blindaje_botones` | Ancla los objetos (`xlFreeFloating`): dejan de moverse con las celdas. |
+| `GuardarPosicionesBotones` | `blindaje_botones` | Guarda la posición correcta de cada botón en `Meta` (`D:H`). |
+| `RestaurarPosicionesBotones` | `blindaje_botones` | Devuelve los botones a su posición registrada. |
+| `LimpiarBotonesDuplicados` | `blindaje_botones` | Detecta y borra los botones clonados por macros viejas. |
+| `BloquearBotones` / `DesbloquearBotones` | `blindaje_botones` | Protege/libera solo los objetos de dibujo (las celdas siguen editables). |
+| `ProtegerEstructura` / `DesprotegerEstructura` | `blindaje_botones` | Bloquea/permite insertar, copiar, mover y renombrar hojas. |
+| `Workbook_Open` | `ThisWorkbook` (evento) | Asegura el UUID, ancla botones y protege la estructura al abrir. |
+| `Workbook_NewSheet` | `ThisWorkbook` (evento) | Elimina cualquier hoja nueva que no sea de sistema. |
+| `Workbook_BeforeSave` | `ThisWorkbook` (evento) | Ningún archivo se guarda sin ID ni con botones fuera de lugar. |
+| `Workbook_BeforePrint` | `ThisWorkbook` (evento) | Igual, antes de imprimir. |
+| `Worksheet_Change` | Hoja Cotización (evento) | Revisa el UUID al cambiar `C4` **o `K4`**. |
+| `Worksheet_Activate` | Hoja Cotización (evento) | Verifica anclaje y posición de los botones al entrar a la hoja. |
 
 *(Se conservan además las macros originales: `suma`, `DuplicarBloque`,
 `AgregarFilaItem`, `AgregarFilaProducto`, `AgregarFilaFecha`,
@@ -369,6 +509,23 @@ Si los 6 pasos funcionan, la instalación está completa.
 | `Plantillas` | Bloques/formatos base para duplicar. |
 | `Categorías` | Lista oficial de categorías (usada para detectar bloques). |
 | `ID Cliente`, `ID Proyecto`, `Versión` | Listas de validación. |
-| `Meta` | **Creada por la macro.** Guarda `(proyecto, uuid)`. Muy oculta. |
+| `Meta` | **Creada por la macro.** Guarda `(proyecto, uuid)` y el registro de posición de los botones. Muy oculta. |
 | `Espacios`, `Instructivo` | Auxiliares existentes. |
+
+**Hoja `Meta` — contenido interno** (no se toca a mano):
+
+| Celda / Rango | Uso |
+|---|---|
+| `B1` | Nombre del proyecto al que está atado el UUID. |
+| `B2` | **UUID vigente. Fuente de la verdad de `K4`.** |
+| `B3` | Fecha/hora de la última asignación. |
+| `D:H` | Registro de botones: `nombre`, `Left`, `Top`, `Width`, `Height` (una fila por objeto). |
+
+**Protecciones aplicadas:**
+
+| Qué | Cómo | Efecto |
+|---|---|---|
+| Objetos de la hoja Cotización | `ws.Protect DrawingObjects:=True, Contents:=False` | No se pueden arrastrar ni borrar los botones; **las celdas siguen editables**. |
+| Estructura del libro | `ThisWorkbook.Protect Structure:=True` | No se pueden insertar, eliminar, copiar, mover ni renombrar hojas. |
+| Contraseña | `PWD_BLINDAJE` en el módulo `M_Blindaje` | Debe ser la misma si además proteges algo a mano. |
 

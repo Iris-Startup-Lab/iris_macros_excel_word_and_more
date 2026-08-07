@@ -11,8 +11,7 @@ Attribute VB_Name = "M_Esquema"
 '               (el detalle largo de cada concepto).
 '
 ' Las categorías se detectan comparando la columna A contra la lista de la hoja
-' "Categorías". La marca de detalle la pone el usuario con MarcarComoDetalle,
-' y las filas marcadas se resaltan en rojizo (formato condicional sobre O="D").
+' "Categorías". La marca de detalle la pone el usuario con MarcarComoDetalle.
 '
 ' Depende de: HojaCotizacion(), COL_MARCA, MARCA_DETALLE, FILA_INICIO (módulo M_UUID).
 
@@ -30,6 +29,9 @@ Public Sub ConstruirEsquema()
     End If
 
     Application.ScreenUpdating = False
+
+    ' Agrupar y colapsar filas mueve/aplasta los objetos atados a celdas.
+    FijarBotones ws
 
     On Error Resume Next
     ws.Rows.ClearOutline          ' limpiamos cualquier agrupación previa
@@ -67,8 +69,7 @@ Public Sub ConstruirEsquema()
     ws.Outline.ShowLevels RowLevels:=2          ' categorías abiertas, detalle colapsado
     On Error GoTo 0
 
-    ResaltarDetalle                             ' asegura el rojizo de las filas marcadas
-
+    RestaurarPosicionesBotones
     Application.ScreenUpdating = True
     MsgBox "Esquema reconstruido." & vbCrLf & _
            "Usa los botones [-]/[+] del margen izquierdo para colapsar categorías o detalle a demanda.", _
@@ -159,6 +160,7 @@ Public Sub ResetMacroDefault()
 
     Application.ScreenUpdating = False
     ultima = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    FijarBotones ws
 
     ' 1) Expandir cualquier nivel de esquema y mostrar todas las filas.
     On Error Resume Next
@@ -174,7 +176,8 @@ Public Sub ResetMacroDefault()
     ' 3) La columna marcadora permanece oculta.
     ws.Columns(COL_MARCA).Hidden = True
 
-    ' 4) Regresar la vista al inicio de la hoja.
+    ' 4) Botones a su panel y vista al inicio de la hoja.
+    RestaurarPosicionesBotones
     ws.Activate
     Application.Goto ws.Range("A1"), True
 

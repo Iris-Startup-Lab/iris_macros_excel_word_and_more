@@ -3,16 +3,16 @@ Attribute VB_Name = "M_PDF"
 '
 ' MÓDULO: M_PDF
 ' Propósito: con un solo clic generar DOS PDFs de la cotización:
-'   1) *_Detalle.pdf  -> todo visible (se expande todo temporalmente).
-'   2) *_Resumen.pdf  -> respeta EXACTAMENTE lo que el usuario dejó colapsado
-'                        (a mano con los botones [-]/[+] o con "Ocultar detalle").
+'   1) *_Detalle.pdf  -> todo visible (el cliente ve el detalle completo).
+'   2) *_Resumen.pdf  -> se ocultan las filas de detalle marcadas ("D" en col O).
 '
 ' El nombre de archivo incluye el UUID (ID Cotización), de modo que archivo e
 ' identificador interno siempre coinciden. Los totales (SUMA TOTAL, SUBTOTAL,
-' IVA, TOTAL) NO cambian al colapsar: son valores ya calculados.
+' IVA, TOTAL) NO cambian al colapsar: son valores ya calculados, así que el
+' Resumen muestra menos líneas pero el mismo total.
 '
 ' Depende de: HojaCotizacion(), AsegurarUUIDCotizacion() (M_UUID)
-'             MostrarTodo(), ResaltarDetalle(), QuitarResaltoDetalle() (M_Esquema).
+'             MostrarTodo(), OcultarDetalle() (M_Esquema).
 
 Option Explicit
 
@@ -24,8 +24,14 @@ Public Sub GenerarPDFsCotizacion()
         Exit Sub
     End If
 
-    ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto.
+    ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto
+    ' (si el usuario lo borró, aquí se reimprime el mismo antes de exportar).
     AsegurarUUIDCotizacion
+
+    ' Ocultar filas para el Resumen aplasta/mueve los objetos atados a celdas:
+    ' los anclamos y los devolvemos a su panel antes de exportar.
+    FijarBotones ws
+    RestaurarPosicionesBotones
 
     Dim cliente As String, proyecto As String, uuid As String
     Dim version As String, fechaCot As String

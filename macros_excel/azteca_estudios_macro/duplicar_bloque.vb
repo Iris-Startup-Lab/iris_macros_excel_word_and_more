@@ -10,6 +10,8 @@ Sub DuplicarBloque()
     Dim numeroFilasBloque As Long
     Dim filasExtraAbajo As Long
 
+    FijarBotones            ' insertar un bloque completo es lo que más los movía
+
     Set hojaDestino = ActiveSheet
     Set hojaPlantilla = Sheets("Plantillas")
 
@@ -39,5 +41,7 @@ Sub DuplicarBloque()
     hojaDestino.Range("A" & filaDestino).PasteSpecial xlPasteAll
 
     Application.CutCopyMode = False
+
+    RestaurarPosicionesBotones
 
 End Sub

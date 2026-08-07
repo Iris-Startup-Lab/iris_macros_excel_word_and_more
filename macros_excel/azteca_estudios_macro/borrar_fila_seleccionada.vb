@@ -18,7 +18,9 @@ Sub BorrarFilaSeleccionada()
     respuesta = MsgBox("¿Seguro que deseas borrar esta fila?", vbYesNo + vbExclamation)
 
     If respuesta = vbYes Then
+        FijarBotones            ' que borrar la fila no arrastre los botones
         Rows(fila).Delete
+        RestaurarPosicionesBotones
     End If
 
 End Sub

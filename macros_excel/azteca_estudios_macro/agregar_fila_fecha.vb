@@ -4,6 +4,8 @@ Sub AgregarFilaFecha()
 
     Dim filaDestino As Long
 
+    FijarBotones            ' los botones no se mueven al insertar la fila
+
     filaDestino = ActiveCell.Row + 1
 
     Rows(filaDestino).Insert Shift:=xlDown
@@ -13,6 +15,8 @@ Sub AgregarFilaFecha()
     Rows(filaDestino).PasteSpecial Paste:=xlPasteFormats
 
     Application.CutCopyMode = False
+
+    RestaurarPosicionesBotones
 
 End Sub
 

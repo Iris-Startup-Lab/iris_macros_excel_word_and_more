@@ -83,6 +83,94 @@ y (c) generar **dos PDFs** (con y sin detalle) con un solo clic.
 
 ---
 
+# 4. Blindaje de la plantilla (botones fijos, ID irrompible, una sola hoja)
+
+Esta sección cubre tres fallas operativas reportadas en producción y su solución.
+
+## Archivos
+
+| Archivo | Tipo | Contenido |
+| --- | --- | --- |
+| `blindaje_botones.vb` / `bas/blindaje_botones.bas` | Módulo `M_Blindaje` | Anclaje, registro y bloqueo de botones; protección de estructura del libro. |
+| `eventos_uuid.vb` | **Eventos** | Reescrito: ata las tres protecciones a `ThisWorkbook` y a la hoja `Cotización`. |
+
+## 4.1 Los botones se movían a la hoja principal
+
+**Causa raíz.** Por omisión todo objeto de Excel nace con
+`Placement = xlMoveAndSize`, es decir **atado a las celdas que tiene debajo**.
+Cada operación de las macros lo altera:
+
+| Operación | Efecto sobre el botón |
+| --- | --- |
+| `Rows(x).Insert` (`AgregarFilaProducto`, `AgregarFilaFecha`, `DuplicarBloque`) | Lo arrastra hacia abajo. |
+| `Rows(x).Copy` + `Insert` (`AgregarFilaItem`) | Lo **duplica**. |
+| `Rows(x).Delete` (`BorrarFilaSeleccionada`) | Lo sube o lo recorta. |
+| `EntireRow.Hidden = True` (PDF Resumen, `OcultarDetalle`) | Lo aplasta a altura ~0. |
+| `.Group` / `ClearOutline` (`ConstruirEsquema`) | Lo desplaza al colapsar. |
+
+**Solución (3 capas).**
+
+1. **Anclaje** — `FijarBotones` pone `Placement = xlFreeFloating` en todos los
+   objetos: dejan de estar ligados a celdas, así que insertar, borrar u ocultar
+   filas ya no los toca ni los clona.
+2. **Registro de posición** — `GuardarPosicionesBotones` guarda
+   `nombre / Left / Top / Width / Height` de cada objeto en la hoja `Meta`
+   (columnas `D:H`). `RestaurarPosicionesBotones` los devuelve ahí.
+   Se llama solo al abrir el libro, al activar la hoja, al guardar, al imprimir
+   y al final de cada macro de estructura. Es idempotente: si nada se movió no
+   escribe nada y **no** marca el libro como modificado.
+3. **Bloqueo** — `BloquearBotones` aplica
+   `ws.Protect DrawingObjects:=True, Contents:=False`. El usuario ya no puede
+   arrastrar, redimensionar ni borrar un botón, pero **las celdas siguen 100%
+   editables** y ninguna macro existente se rompe.
+
+`LimpiarBotonesDuplicados` detecta los objetos que no están en el registro
+(los clones históricos) y los elimina previa confirmación.
+
+## 4.2 El ID Cotización se borraba y no volvía
+
+**Causa raíz.** `Worksheet_Change` solo vigilaba `C4`. Si el usuario borraba
+`K4`, nada lo repuso.
+
+**Solución.** La hoja `Meta` (`B2`) es la fuente de la verdad; `K4` es solo su
+proyección. `VigilarIDCotizacion` se dispara con cambios en `C4` **o `K4`**:
+
+- `K4` vacío o alterado a mano → se **reimprime el mismo UUID** (no se genera
+  uno nuevo) y se avisa al usuario.
+- `C4` cambió → se asigna el UUID que corresponde al nuevo proyecto.
+
+Además `RestaurarIDSiFalta` corre al abrir, al guardar, al imprimir y antes de
+generar los PDFs, así que ningún archivo se guarda ni exporta sin ID.
+
+> Único caso en que `K4` queda vacío a propósito: cuando `C4` (proyecto) está
+> vacío. Sin proyecto no hay identidad que registrar.
+
+## 4.3 Se podían crear más hojas de cotización
+
+**Solución (2 capas).**
+
+1. **Nativa** — `ProtegerEstructura` aplica
+   `ThisWorkbook.Protect Structure:=True`, con lo que Excel deshabilita
+   *Insertar hoja*, *Eliminar hoja*, *Mover o copiar hoja*, *Cambiar nombre* y
+   *Ocultar/Mostrar*. Se reaplica en `Workbook_Open` y `Workbook_BeforeSave`.
+2. **Evento** — `Workbook_NewSheet` elimina al vuelo cualquier hoja que llegue a
+   crearse y explica que una cotización = un archivo `.xlsm`.
+
+La bandera pública `gCreandoHojaSistema` permite que las macros creen la hoja de
+sistema `Meta` sin que el evento la borre.
+
+## Puesta en marcha
+
+Con el panel de botones ya acomodado como debe quedar, ejecuta **una vez**
+`BlindarLibro`: ancla, registra posiciones, asegura el ID y protege la
+estructura. Para mantenimiento, `DesblindarLibro` retira el blindaje (se vuelve
+a aplicar solo al reabrir el archivo).
+
+> La contraseña vive en `PWD_BLINDAJE` (módulo `M_Blindaje`). **Cámbiala** antes
+> de repartir el archivo y anótala: sin ella no se puede desproteger.
+
+---
+
 # 2. Construcción y cálculo automático de cotizaciones estructuradas
 
 ## Descripción técnica
