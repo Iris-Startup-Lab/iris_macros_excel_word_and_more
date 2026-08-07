@@ -1,5 +1,11 @@
 # Excel VBA Automation Toolkit
 
+Autores:
+
+- Fernando Dorantes Nieto
+- Azeneth Guadalupe García Méndez
+- Javier Flores Martinez
+
 Este proyecto contiene macros en VBA orientadas a automatizar dos procesos clave:
 
 1. Generación de identificadores únicos (UUIDs)
@@ -24,7 +30,7 @@ y (c) generar **dos PDFs** (con y sin detalle) con un solo clic.
 ## Archivos (módulos a importar)
 
 | Archivo | Tipo | Contenido |
-|---|---|---|
+| --- | --- | --- |
 | `macro_generadora_uuid.vb` | Módulo | Generador base `GENERAR_UUID()` (ya existente, requerido). |
 | `asignar_uuid_cotizacion.vb` | Módulo `M_UUID` | Asigna/mantiene el UUID en `K4` atado al proyecto (`C4`). Helpers y constantes compartidas. |
 | `esquema_categorias.vb` | Módulo `M_Esquema` | Construye el esquema de 2 niveles y colapsa/expande/marca detalle. |
@@ -53,6 +59,7 @@ y (c) generar **dos PDFs** (con y sin detalle) con un solo clic.
 ## Los dos PDFs
 
 `GenerarPDFsCotizacion` produce en la carpeta del libro:
+
 - `Cotizacion_<Cliente>_<Proyecto>_<UUID>_v<Versión>_<Fecha>_Detalle.pdf`
 - `..._Resumen.pdf` (con las filas `D` ocultas)
 
@@ -77,9 +84,8 @@ y (c) generar **dos PDFs** (con y sin detalle) con un solo clic.
 ---
 
 # 2. Construcción y cálculo automático de cotizaciones estructuradas
+
 ## Descripción técnica
-
-
 
 Este conjunto de macros implementa un sistema de cotización dinámico que:
 
@@ -87,7 +93,6 @@ Organiza servicios por categorías
 Calcula subtotales, descuentos e impuestos
 
 Permite manipulación dinámica del documento (filas, bloques, exportación)
-
 
 Cada fila representa una entidad con atributos:
 
@@ -102,26 +107,23 @@ Concepto = {
     total
 }
 
-Subtotal = PrecioUnitario * Cantidad * Dias * Semanas
-
+Subtotal = PrecioUnitario *Cantidad* Dias * Semanas
 
 Total = Subtotal * (1 - PorcentajeDescuento)
 
 ### Suma por categoría
+
 La macro:
 
 - Identifica bloques de categorías
 - Recorre cada fila activa
 - Acumula totales
 
-
 SubtotalGeneral = Σ TotalesCategorias
 
 IVA = SubtotalGeneral * 0.16
 
 TotalFinal = SubtotalGeneral + IVA
-
-
 
 ### Manipulación dinámica del documento
 
@@ -131,17 +133,13 @@ Inserta nuevas filas dentro de una categoría.
 Replica formatos y fórmulas.
 Ajusta referencias automáticamente.
 
-
-####  Agregar bloques de categoría
+#### Agregar bloques de categoría
 
 Duplica una estructura completa:
 
 Encabezado
 Filas.
 Fórmulas de suma.
-
-
-
 
 #### Eliminación de filas
 

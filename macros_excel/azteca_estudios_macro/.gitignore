@@ -1,0 +1,13 @@
+# Ignorar carpetas ocultas que comiencen con un punto "."
+.*/
+
+# Archivos temporales de Microsoft Excel
+~$*.xlsx
+~$*.xls
+
+# Archivos del sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+ejemplos/
