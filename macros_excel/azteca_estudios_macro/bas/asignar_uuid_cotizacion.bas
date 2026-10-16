@@ -95,12 +95,33 @@ Public Sub AsegurarUUIDCotizacion()
     proyGuardado = Trim$(CStr(meta.Range("B1").Value))
     uuidGuardado = Trim$(CStr(meta.Range("B2").Value))
 
-    ' Regeneramos solo si: no hay UUID, o el proyecto cambió.
-    If Len(uuidGuardado) = 0 Or StrComp(proyGuardado, proyecto, vbTextCompare) <> 0 Then
+    ' Regeneramos si: no hay UUID, o el proyecto cambió.
+    If Len(uuidGuardado) = 0 Then
         uuidGuardado = GENERAR_UUID()
         meta.Range("B1").Value = proyecto
         meta.Range("B2").Value = uuidGuardado
         meta.Range("B3").Value = Now
+    ElseIf StrComp(proyGuardado, proyecto, vbTextCompare) <> 0 Then
+        ' El nombre de proyecto cambió. Para evitar perder el folio por una simple
+        ' corrección ortográfica o tipográfica, preguntamos al usuario si desea conservar el UUID:
+        Dim respUUID As VbMsgBoxResult
+        respUUID = MsgBox("El nombre del proyecto ha cambiado:" & vbCrLf & vbCrLf & _
+                          "  • Nombre anterior: """ & proyGuardado & """" & vbCrLf & _
+                          "  • Nombre nuevo:    """ & proyecto & """" & vbCrLf & vbCrLf & _
+                          "¿Deseas generar un nuevo ID de cotización (UUID)?" & vbCrLf & vbCrLf & _
+                          "  [Sí]  -> Generar un nuevo folio (cotización nueva)." & vbCrLf & _
+                          "  [No]  -> Conservar el ID actual (corrección ortográfica / misma cotización).", _
+                          vbYesNo + vbQuestion, "Cambio de Nombre de Proyecto")
+        If respUUID = vbYes Then
+            uuidGuardado = GENERAR_UUID()
+            meta.Range("B1").Value = proyecto
+            meta.Range("B2").Value = uuidGuardado
+            meta.Range("B3").Value = Now
+        Else
+            ' Conservar el UUID existente y actualizar solo el nombre en Meta
+            meta.Range("B1").Value = proyecto
+            meta.Range("B3").Value = Now
+        End If
     End If
 
     ' Meta es la fuente de la verdad: si K4 está vacío (lo borraron) o alguien lo

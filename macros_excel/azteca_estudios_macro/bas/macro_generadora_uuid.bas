@@ -1,4 +1,4 @@
-Attribute VB_Name = "M_GeneradorUUID"
+Attribute VB_Name = "macro_generadora_uuid"
 ' Autor: Fernando Dorantes Nieto
 ' Revisor: DeepSeek V4 Pro
 
@@ -20,7 +20,7 @@ End Type
 ' --- FUNCIÓN AUXILIAR PARA DAR FORMATO ---
 Private Function FormatearGUID(g As GUID) As String
     Dim strGUID As String
-
+    
     ' Convierte los números a Hexadecimal y les da el formato correcto con guiones
     strGUID = Right("00000000" & Hex(g.Data1), 8) & "-" & _
               Right("0000" & Hex(g.Data2), 4) & "-" & _
@@ -29,7 +29,7 @@ Private Function FormatearGUID(g As GUID) As String
               Right("00" & Hex(g.Data4(2)), 2) & Right("00" & Hex(g.Data4(3)), 2) & _
               Right("00" & Hex(g.Data4(4)), 2) & Right("00" & Hex(g.Data4(5)), 2) & _
               Right("00" & Hex(g.Data4(6)), 2) & Right("00" & Hex(g.Data4(7)), 2)
-
+              
     ' Devuelve el UUID en mayúsculas (cambia a LCase si lo quieres en minúsculas)
     FormatearGUID = UCase(strGUID)
 End Function
@@ -37,7 +37,7 @@ End Function
 ' --- FUNCIÓN PRINCIPAL QUE PUEDES USAR EN EXCEL ---
 Public Function GENERAR_UUID() As String
     Dim g As GUID
-
+    
     ' Si el sistema genera el GUID correctamente (retorno 0), lo formatea
     If CoCreateGuid(g) = 0 Then
         GENERAR_UUID = FormatearGUID(g)
@@ -49,7 +49,7 @@ End Function
 ' --- MACRO PARA INSERTAR UUIDs EN VARIAS CELDAS SELECCIONADAS ---
 Sub InsertarUUIDsEnSeleccion()
     Dim celda As Range
-
+    
     ' Recorre cada celda seleccionada
     For Each celda In Selection
         ' Evita que se ejecute en celdas combinadas o protegidas

@@ -1,5 +1,6 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Modificado con validación de contexto de fila y recálculo automático
 Sub DuplicarBloque()
 
     Dim hojaDestino As Worksheet
@@ -10,23 +11,25 @@ Sub DuplicarBloque()
     Dim numeroFilasBloque As Long
     Dim filasExtraAbajo As Long
 
+    filaActual = ActiveCell.Row
+    If Not ValidarFilaEnBloque(filaActual) Then Exit Sub
+
     FijarBotones            ' insertar un bloque completo es lo que más los movía
 
     Set hojaDestino = ActiveSheet
     Set hojaPlantilla = Sheets("Plantillas")
 
-    filaActual = ActiveCell.Row
     filaDestino = 0
 
     For Each celda In hojaDestino.Range("A" & filaActual & ":A1000")
-        If InStr(1, celda.Value, "SUMA") > 0 Then
+        If InStr(1, UCase(celda.Value), "SUMA") > 0 Then
             filaDestino = celda.Row + 2
             Exit For
         End If
     Next celda
 
     If filaDestino = 0 Then
-        MsgBox "No se encontró ninguna fila de SUMA debajo."
+        MsgBox "No se encontró ninguna fila de SUMA debajo de la fila seleccionada.", vbExclamation, "No se encontró bloque"
         Exit Sub
     End If
 
@@ -43,5 +46,6 @@ Sub DuplicarBloque()
     Application.CutCopyMode = False
 
     RestaurarPosicionesBotones
+    Call suma               ' recalcular totales
 
 End Sub

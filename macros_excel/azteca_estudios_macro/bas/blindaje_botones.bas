@@ -57,9 +57,20 @@ Public Sub FijarBotones(Optional ByVal ws As Worksheet)
     If ws Is Nothing Then Exit Sub
     If ws.Shapes.Count = 0 Then Exit Sub
 
+    ' Nota: cuando la hoja está protegida con DrawingObjects:=True, incluso LEER
+    ' Sh.Placement puede lanzar error 1004. Por eso protegemos este loop con
+    ' On Error Resume Next; si falla la lectura, asumimos que falta anclar.
+    On Error Resume Next
     For Each sh In ws.Shapes
-        If sh.Placement <> xlFreeFloating Then faltaAnclar = True: Exit For
+        Err.Clear
+        Dim p As Long
+        p = sh.Placement
+        If Err.Number <> 0 Or p <> xlFreeFloating Then
+            faltaAnclar = True
+            Exit For
+        End If
     Next sh
+    On Error GoTo 0
     If Not faltaAnclar Then Exit Sub
 
     DesbloquearBotones ws
@@ -327,3 +338,70 @@ Public Sub DesblindarLibro()
            "Al cerrar y volver a abrir el libro se aplica solo otra vez." & vbCrLf & _
            "Si moviste botones a propósito, corre «GuardarPosicionesBotones».", vbInformation
 End Sub
+
+
+' ============================================================
+'  4) GUARDIÁN DE FILA ACTIVA (VALIDACIÓN DE CONTEXTO)
+' ============================================================
+
+' Verifica que la fila pertenezca estrictamente al área de conceptos
+' (entre FILA_INICIO y antes de los totales finales SUBTOTAL / IVA / TOTAL).
+' Evita que un usuario inserte o borre filas en el encabezado o en los totales.
+Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAviso As Boolean = True) As Boolean
+    Dim ws As Worksheet
+    Set ws = HojaCotizacion()
+
+    If ws Is Nothing Then
+        If mostrarAviso Then MsgBox "No se encontró la hoja de Cotización.", vbCritical, "Hoja no encontrada"
+        Exit Function
+    End If
+
+    ' 1) Verificar que la hoja activa sea la de cotización
+    If UCase$(Trim$(ActiveSheet.Name)) <> UCase$(Trim$(ws.Name)) Then
+        If mostrarAviso Then
+            MsgBox "Esta operación solo se puede realizar en la hoja de Cotización.", vbExclamation, "Hoja no válida"
+        End If
+        Exit Function
+    End If
+
+    ' 2) No permitir operaciones por encima de la tabla (encabezados de proyecto)
+    If fila < FILA_INICIO Then
+        If mostrarAviso Then
+            MsgBox "Por favor, selecciona una fila dentro de la tabla de conceptos para insertar o borrar." & vbCrLf & vbCrLf & _
+                   "(Las filas superiores corresponden a datos generales del proyecto y no deben modificarse con este botón).", _
+                   vbExclamation, "Ubicación fuera de la tabla"
+        End If
+        Exit Function
+    End If
+
+    ' 3) Encontrar dónde empiezan los totales finales (SUBTOTAL en columna I o A)
+    Dim ultimaFila As Long, r As Long, filaFinTotales As Long
+    ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    If ws.Cells(ws.Rows.Count, "I").End(xlUp).Row > ultimaFila Then
+        ultimaFila = ws.Cells(ws.Rows.Count, "I").End(xlUp).Row
+    End If
+
+    filaFinTotales = ultimaFila + 1
+    For r = FILA_INICIO To ultimaFila + 20
+        Dim txtI As String, txtA As String
+        txtI = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "I").Value)), ".", ""), " ", ""))
+        txtA = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "A").Value)), ".", ""), " ", ""))
+        If InStr(txtI, "SUBTOTAL") > 0 Or InStr(txtA, "SUBTOTAL") > 0 Then
+            filaFinTotales = r
+            Exit For
+        End If
+    Next r
+
+    ' 4) Si la fila seleccionada está en los totales finales o más abajo, bloquear
+    If fila >= filaFinTotales Then
+        If mostrarAviso Then
+            MsgBox "Por favor, selecciona una fila dentro de la tabla de conceptos para insertar o borrar." & vbCrLf & vbCrLf & _
+                   "(No se pueden insertar ni borrar filas en el área de totales finales de la cotización).", _
+                   vbExclamation, "Ubicación fuera de la tabla"
+        End If
+        Exit Function
+    End If
+
+    ValidarFilaEnBloque = True
+End Function
+

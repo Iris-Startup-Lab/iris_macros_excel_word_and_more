@@ -10,6 +10,7 @@ Este documento proporciona contexto técnico, arquitectura, convenciones y regla
 **Propósito:** Sistema de automatización en VBA para Microsoft Excel en Windows orientado a la generación, estructuración, cálculo, colapso visual y exportación a PDF de cotizaciones comerciales de Azteca Estudios.
 
 ### Funcionalidades Clave
+
 1. **UUID Estable y Automático:** Generación de un UUID único por cotización en la celda `K4`, vinculado al nombre del proyecto (`C4`) y persistido en una hoja de sistema muy oculta (`Meta`).
 2. **Esquema Multinivel (Agrupación/Colapso):** Colapso y expansión a demanda de categorías completas (Nivel 1) y líneas de detalle técnico (Nivel 2, identificadas por la marca `"D"` en la columna oculta `O`).
 3. **Exportación Dual a PDF en 1 Clic:** Generación automática de dos archivos PDF (`..._Resumen.pdf` y `..._Detalle.pdf`) con nomenclatura estandarizada.
@@ -65,6 +66,7 @@ azteca_estudios_macro/
 ## 3. Arquitectura y Componentes Clave
 
 ### A. Módulo `M_UUID` (`asignar_uuid_cotizacion.vb` / `.bas`)
+
 - **Celda Destino:** `K4` ("ID Cotización"). Formateada explícitamente como texto (`@`).
 - **Celda Disparadora:** `C4` ("Nombre del Proyecto").
 - **Celda Versión:** `N4`.
@@ -80,12 +82,14 @@ azteca_estudios_macro/
 - **Helper de Búsqueda de Hojas (`HojaQueContiene` / `HojaCotizacion`):** Búsqueda flexible e insensible a mayúsculas/acentos/espacios para prevenir fallos por renombrado parcial de hojas (ej. `"Cotización "`).
 
 ### B. Módulo `M_Esquema` (`esquema_categorias.vb` / `.bas`)
+
 - **Nivel 1 (Categoría):** Agrupa desde la fila posterior al título de la categoría hasta la fila previa a `SUMA TOTAL`. Permite colapsar el bloque completo dejando visible solo el encabezado y su total.
 - **Nivel 2 (Detalle):** Detecta rachas consecutivas de filas con valor `"D"` en la columna `O` y aplica `.Group`.
 - **Carga de Categorías (`CargarCategorias`):** Lee la hoja `Categorías` para identificar dinámicamente los nombres válidos de categoría.
 - **MergeArea Handling:** `FilaFinEncabezado` determina correctamente el final de títulos fusionados (ej. `A7:N8`).
 
 ### C. Módulo `M_PDF` (`generar_pdfs_resumen_detalle.vb` / `.bas`)
+
 - Exporta dos documentos PDF en la misma carpeta del archivo `.xlsm`:
   1. `..._Detalle.pdf`: Muestra todas las filas visibles y detalladas.
   2. `..._Resumen.pdf`: Oculta temporalmente las filas con marca `"D"` antes de exportar y restaura su visibilidad inmediatamente después.
@@ -109,6 +113,7 @@ Resuelve tres fallas operativas. **Léelo antes de tocar cualquier macro que ins
 - **Entradas:** `BlindarLibro()` (puesta en marcha) y `DesblindarLibro()` (mantenimiento).
 
 ### E. Eventos (`eventos_uuid.vb`)
+
 - **`ThisWorkbook`:**
   - `Workbook_Open`: `AsegurarUUIDCotizacion` → `FijarBotones` → `RestaurarPosicionesBotones` → `ProtegerEstructura`.
   - `Workbook_NewSheet(Sh)`: si `gCreandoHojaSistema` es `False`, elimina `Sh` (con `DisplayAlerts`/`EnableEvents` desactivados), reprotege la estructura y notifica que una cotización equivale a un archivo `.xlsm`.
@@ -120,6 +125,7 @@ Resuelve tres fallas operativas. **Léelo antes de tocar cualquier macro que ins
 > Los eventos son deliberadamente delgados (una línea de delegación): toda la lógica vive en módulos estándar para que sea importable, versionable y testeable.
 
 ### F. Recálculo Matemático (`suma.vb`)
+
 - Recorre la columna `A` buscando etiquetas `"SUMA TOTAL"` o `"SUMA TOTAL:"`.
 - Acumula los valores numéricos de la columna `M` (Total por renglón) hacia la celda `M` de la fila de suma.
 - Busca en la columna `I` los rótulos `"SUBTOTAL"`, `"IVA"` y `"TOTAL"` para asignar en la columna `K`:
@@ -134,16 +140,19 @@ Resuelve tres fallas operativas. **Léelo antes de tocar cualquier macro que ins
 Al modificar o crear código en este repositorio, **sigue estrictamente las siguientes reglas**:
 
 ### 1. Compatibilidad de Entorno
+
 - **Sistema Operativo Target:** Windows. La generación de UUIDs depende de las funciones Windows API (`CoCreateGuid` y `StringFromGUID2` en `ole32.dll`).
 - **Formato de Libro:** Todo archivo funcional debe ser `.xlsm` (Libro de Excel Habilitado para Macros). Nunca guardar versiones activas como `.xlsx`.
 
 ### 2. Sincronización Doble de Código (`.vb` y `bas/*.bas`)
+
 - Los archivos `.vb` en la raíz son la fuente principal de código legible en UTF-8 / Markdown.
 - Los archivos `.bas` en la carpeta `bas/` corresponden a los módulos estándar listos para importación en el editor VBA de Excel. **Formato obligatorio:** codificación **cp1252 (Windows-1252)**, saltos de línea **CRLF**, y primera línea `Attribute VB_Name = "<NombreDelMódulo>"`. Si se escriben en UTF-8, los acentos aparecen corruptos dentro del editor VBA.
 - **REGLA:** Si realizas un cambio en una macro modular (`asignar_uuid_cotizacion`, `esquema_categorias`, `generar_pdfs_resumen_detalle`, `macro_generadora_uuid`, `blindaje_botones`), **debes actualizar tanto el archivo `.vb` en la raíz como el correspondiente `.bas` dentro de `bas/`**.
 - Mapeo archivo → nombre de módulo: `asignar_uuid_cotizacion` → `M_UUID`, `esquema_categorias` → `M_Esquema`, `generar_pdfs_resumen_detalle` → `M_PDF`, `blindaje_botones` → `M_Blindaje`.
 
 ### 2.bis Regla de Integridad Visual (obligatoria)
+
 Toda macro que **inserte, elimine, oculte, agrupe o copie filas** en la hoja `Cotización` **debe**:
 
 1. Llamar `FijarBotones ws` (o `FijarBotones` sin argumentos) **antes** de la operación, para que los objetos no se arrastren, aplasten ni dupliquen.
@@ -154,8 +163,10 @@ Macros que ya cumplen: `AgregarFilaProducto`, `AgregarFilaFecha`, `AgregarFilaIt
 Ambas rutinas son idempotentes y no marcan el libro como modificado si no hay nada que cambiar, así que llamarlas de más es inofensivo.
 
 ### 3. Buenas Prácticas de Código VBA
+
 - **`Option Explicit` OBLIGATORIO:** Todas las variables deben declararse explícitamente (`Dim`).
 - **Manejo de Pantalla y Eventos:** Al realizar operaciones masivas o de ocultación temporal (como en esquemas o generación de PDFs):
+
   ```vba
   Application.ScreenUpdating = False
   Application.EnableEvents = False
@@ -163,10 +174,12 @@ Ambas rutinas son idempotentes y no marcan el libro como modificado si no hay na
   Application.EnableEvents = True
   Application.ScreenUpdating = True
   ```
+
 - **Control de Errores Limpio:** Usar `On Error Resume Next` / `On Error GoTo 0` o etiquetas de salida limpias (`On Error GoTo salir`) garantizando que `EnableEvents` y `ScreenUpdating` se restablezcan en `True` siempre.
 - **Acceso Robusto a Hojas:** No asumas el nombre exacto de la pestaña ni el CodeName interno (`Hoja1`). Usa la función helper `HojaCotizacion()` / `HojaQueContiene("COTIZACI")` para tolerar variaciones de espacios o acentos.
 
 ### 4. Mapeo Rígido de Celdas y Columnas
+
 | Elemento / Campo | Ubicación en Excel |
 | --- | --- |
 | Nombre del Cliente | Celda `C3` |
@@ -185,6 +198,7 @@ Ambas rutinas son idempotentes y no marcan el libro como modificado si no hay na
 | Registro de posición de botones | `Meta!D:H` (`nombre`, `Left`, `Top`, `Width`, `Height`) |
 
 ### 5. Reglas de Protección
+
 - **Contraseña única:** `PWD_BLINDAJE` (módulo `M_Blindaje`). Nunca introduzcas una contraseña literal en otra parte del código ni sugieras al usuario proteger a mano con una distinta: las macros no podrían desproteger.
 - **Protección de hoja:** exclusivamente `DrawingObjects:=True, Contents:=False`. **No protejas el contenido de celdas** de la hoja `Cotización`: obligaría a desbloquear celda por celda todas las de captura y a envolver cada macro de estructura en un `Unprotect`/`Protect`. Si un requisito futuro lo exige, usa `UserInterfaceOnly:=True` y ten presente que ese flag **se pierde al cerrar el libro** (hay que reaplicarlo en `Workbook_Open`).
 - **Protección de estructura:** `Structure:=True, Windows:=False`. Cualquier macro que necesite crear, eliminar o renombrar una hoja debe levantar `gCreandoHojaSistema`, llamar `DesprotegerEstructura`, operar, y cerrar con `ProtegerEstructura` + bajar la bandera (ver `HojaMeta()` como referencia).
@@ -236,3 +250,9 @@ Cuando realices modificaciones a las macros, efectúa las siguientes verificacio
 - **La contraseña no funciona:** El usuario protegió a mano con una contraseña distinta a `PWD_BLINDAJE`. Deben coincidir; ver sección 4.5.
 - **El libro se marca como modificado sin que el usuario toque nada:** Alguna llamada a `Protect`/`Unprotect` o reposicionamiento de `Shape` se está ejecutando sin necesidad. `FijarBotones` y `RestaurarPosicionesBotones` traen guardas de idempotencia (tolerancia de `0.5` pt y verificación de `ProtectDrawingObjects`); no las elimines.
 - **Botones duplicados heredados:** Archivos creados **antes** del blindaje pueden traer clones acumulados por `AgregarFilaItem`. Ejecutar `LimpiarBotonesDuplicados` después de `GuardarPosicionesBotones`.
+
+## 7. Al finalizar
+
+Al finalizar de realizar cambios en código, dar una guía detallada de como editar la macro en Excel al usuario.
+
+Los cambios realizados, deben escribirse si o si en to_do.md con fechas por cada cambio y título

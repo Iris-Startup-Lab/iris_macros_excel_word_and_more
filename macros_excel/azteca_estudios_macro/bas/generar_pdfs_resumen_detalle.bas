@@ -20,13 +20,24 @@ Public Sub GenerarPDFsCotizacion()
     Dim ws As Worksheet
     Set ws = HojaCotizacion()
     If ws Is Nothing Then
-        MsgBox "No se encontró la hoja de Cotización.", vbCritical
+        MsgBox "No se encontró la hoja de Cotización.", vbCritical, "Error"
+        Exit Sub
+    End If
+
+    ' Validar que el libro esté guardado en disco
+    If Len(ThisWorkbook.Path) = 0 Then
+        MsgBox "Por favor, guarda el libro de Excel en tu computadora antes de generar los PDFs." & vbCrLf & _
+               "(Archivo > Guardar como...)", vbExclamation, "Libro no guardado"
         Exit Sub
     End If
 
     ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto
-    ' (si el usuario lo borró, aquí se reimprime el mismo antes de exportar).
     AsegurarUUIDCotizacion
+
+    ' Recálculo automático: asegura que todos los totales reflejen los datos actuales
+    On Error Resume Next
+    Call suma
+    On Error GoTo 0
 
     ' Ocultar filas para el Resumen aplasta/mueve los objetos atados a celdas:
     ' los anclamos y los devolvemos a su panel antes de exportar.
@@ -46,7 +57,7 @@ Public Sub GenerarPDFsCotizacion()
     On Error GoTo 0
 
     If Len(uuid) = 0 Then
-        MsgBox "Falta el nombre del proyecto (C4) para poder asignar el ID/UUID.", vbExclamation
+        MsgBox "Falta el nombre del proyecto (C4) para poder asignar el ID/UUID.", vbExclamation, "Datos incompletos"
         Exit Sub
     End If
 
@@ -71,33 +82,75 @@ Public Sub GenerarPDFsCotizacion()
 
     ' 1) DETALLE: todo visible (se expande todo temporalmente).
     MostrarTodo
-    Exportar ws, ruta & baseNombre & "_Detalle.pdf"
+    If Not ExportarPDF(ws, ruta & baseNombre & "_Detalle.pdf") Then
+        GoTo FinalizarConError
+    End If
 
     ' 2) RESUMEN: se restaura EXACTAMENTE lo que el usuario tenía colapsado.
     For i = FILA_INICIO To ultima
         ws.Rows(i).EntireRow.Hidden = estado(i)
     Next i
-    Exportar ws, ruta & baseNombre & "_Resumen.pdf"
+    If Not ExportarPDF(ws, ruta & baseNombre & "_Resumen.pdf") Then
+        GoTo FinalizarConError
+    End If
 
     ' La hoja queda en el estado del usuario; devolvemos el rojizo de trabajo.
     ResaltarDetalle
-
     Application.ScreenUpdating = True
 
-    MsgBox "PDFs generados en la carpeta del libro:" & vbCrLf & vbCrLf & _
-           "  - " & baseNombre & "_Detalle.pdf" & vbCrLf & _
-           "  - " & baseNombre & "_Resumen.pdf" & vbCrLf & vbCrLf & _
-           "ID Cotización (UUID): " & uuid, vbInformation
+    Dim respAbrir As VbMsgBoxResult
+    respAbrir = MsgBox("PDFs generados exitosamente en la carpeta del libro:" & vbCrLf & vbCrLf & _
+                       "  • " & baseNombre & "_Detalle.pdf" & vbCrLf & _
+                       "  • " & baseNombre & "_Resumen.pdf" & vbCrLf & vbCrLf & _
+                       "ID Cotización (UUID): " & uuid & vbCrLf & vbCrLf & _
+                       "¿Deseas abrir la carpeta con los PDFs generados ahora?", vbYesNo + vbInformation, "Exportación Dual Exitosa")
+
+    If respAbrir = vbYes Then
+        On Error Resume Next
+        Shell "explorer.exe /select,""" & ruta & baseNombre & "_Detalle.pdf" & """", vbNormalFocus
+        On Error GoTo 0
+    End If
+    Exit Sub
+
+FinalizarConError:
+    ' Restaurar estado de filas y resalto si ocurrió un error durante la exportación
+    For i = FILA_INICIO To ultima
+        ws.Rows(i).EntireRow.Hidden = estado(i)
+    Next i
+    ResaltarDetalle
+    Application.ScreenUpdating = True
 End Sub
 
-Private Sub Exportar(ByVal ws As Worksheet, ByVal archivo As String)
+Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As Boolean
+    On Error Resume Next
     ws.ExportAsFixedFormat _
         Type:=xlTypePDF, _
         Filename:=archivo, _
         Quality:=xlQualityStandard, _
         IgnorePrintAreas:=False, _
         OpenAfterPublish:=False
-End Sub
+
+    If Err.Number <> 0 Then
+        Dim numError As Long, descError As String
+        numError = Err.Number
+        descError = Err.Description
+        On Error GoTo 0
+
+        If numError = 1004 Then
+            MsgBox "No se pudo generar el archivo PDF porque ya se encuentra abierto en otro programa " & _
+                   "(como Adobe Acrobat o su navegador web):" & vbCrLf & vbCrLf & _
+                   "  " & archivo & vbCrLf & vbCrLf & _
+                   "Por favor ciérralo y vuelve a presionar el botón.", vbCritical, "Archivo PDF abierto o bloqueado"
+        Else
+            MsgBox "Ocurrió un error inesperado al generar el PDF (" & numError & "):" & vbCrLf & _
+                   descError & vbCrLf & vbCrLf & "Archivo: " & archivo, vbCritical, "Error al exportar PDF"
+        End If
+        ExportarPDF = False
+        Exit Function
+    End If
+    On Error GoTo 0
+    ExportarPDF = True
+End Function
 
 Private Function LimpiarNombre(ByVal s As String) As String
     Dim r As String
@@ -113,3 +166,4 @@ Private Function LimpiarNombre(ByVal s As String) As String
     r = Replace(r, "|", "")
     LimpiarNombre = r
 End Function
+
