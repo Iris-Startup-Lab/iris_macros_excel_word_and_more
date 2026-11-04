@@ -255,7 +255,7 @@ Private Function GenerarPlantillaHTML(ByVal titulo As String, _
 End Function
 
 ' ==============================================================================
-' SUB OPCIONAL: ProbarEnvioFilaSeleccionada
+' SUB OPCIONAL: ProbarEnvioFilaSeleccionada adasdsad
 ' ==============================================================================
 ' Permite al usuario seleccionar cualquier celda de una fila y enviar un correo
 ' de prueba solo para esa fila, sin importar la fecha, mostrando el correo
