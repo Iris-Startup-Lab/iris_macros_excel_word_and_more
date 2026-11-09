@@ -1,5 +1,11 @@
 # Registro de Tareas y Cambios — Azteca Estudios Macro
 
+## [2026-11-09] Propuesta — Firma digital y totales con fórmulas (pendiente de cliente)
+
+- **Documento:** `propuesta_de_firma.md`, con la firma digital (funcionamiento, efecto al abrir, opciones de certificado, procedimiento, riesgos y preguntas al cliente) y un anexo con los totales como fórmulas nativas.
+- **Estado:** ambas propuestas **sin implementar** hasta validarlas con el cliente.
+- **Código:** sin cambios.
+
 ## [2026-11-09] Corrección — Bug 2: UUID duplicado al copiar el archivo
 
 - **Problema:** una copia del `.xlsm` heredaba el UUID de `Meta!B2`; con el mismo proyecto, dos cotizaciones compartían ID.
