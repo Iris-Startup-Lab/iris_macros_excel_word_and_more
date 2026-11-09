@@ -21,18 +21,53 @@ Public Const MARCA_DETALLE As String = "D"    ' valor que marca una fila como "d
 Public Const FILA_INICIO As Long = 7          ' primera fila de bloques de categorías
 
 ' --- Helpers de localización de hojas (robustos ante espacios/acentos) ---
+' 2026-11-09: ahora sí es insensible a acentos y espacios (antes solo a
+' mayúsculas), y da prioridad a la coincidencia EXACTA antes que a la parcial,
+' para que "Cotización" gane sobre p. ej. "Plantilla Cotización".
+' Las hojas de sistema (Meta, _BaseAE...) nunca se devuelven.
 Public Function HojaQueContiene(ByVal token As String) As Worksheet
     Dim ws As Worksheet
+    Dim t As String, nombre As String
+
+    t = NormalizarNombreHoja(token)
+    If Len(t) = 0 Then Exit Function
+
+    ' 1) Coincidencia exacta
     For Each ws In ThisWorkbook.Worksheets
-        If InStr(1, UCase$(Trim$(ws.Name)), UCase$(token)) > 0 Then
-            Set HojaQueContiene = ws
-            Exit Function
+        If Not EsHojaSistema(ws) Then
+            If NormalizarNombreHoja(ws.Name) = t Then
+                Set HojaQueContiene = ws
+                Exit Function
+            End If
+        End If
+    Next ws
+
+    ' 2) Coincidencia parcial (tolera "Cotización 2", "COTIZACION AE", etc.)
+    For Each ws In ThisWorkbook.Worksheets
+        If Not EsHojaSistema(ws) Then
+            nombre = NormalizarNombreHoja(ws.Name)
+            If InStr(1, nombre, t) > 0 Then
+                Set HojaQueContiene = ws
+                Exit Function
+            End If
         End If
     Next ws
 End Function
 
 Public Function HojaCotizacion() As Worksheet
-    Set HojaCotizacion = HojaQueContiene("COTIZACI")
+    Set HojaCotizacion = HojaQueContiene("COTIZACION")
+End Function
+
+Private Function NormalizarNombreHoja(ByVal s As String) As String
+    s = UCase$(s)
+    s = Replace(s, "Á", "A"): s = Replace(s, "É", "E"): s = Replace(s, "Í", "I")
+    s = Replace(s, "Ó", "O"): s = Replace(s, "Ú", "U"): s = Replace(s, "Ü", "U")
+    s = Replace(s, " ", ""): s = Replace(s, Chr$(160), "")
+    NormalizarNombreHoja = s
+End Function
+
+Private Function EsHojaSistema(ByVal ws As Worksheet) As Boolean
+    EsHojaSistema = (StrComp(ws.Name, "Meta", vbTextCompare) = 0) Or (Left$(ws.Name, 1) = "_")
 End Function
 
 ' Pública porque M_Blindaje también guarda ahí el registro de posiciones de los
@@ -47,6 +82,12 @@ Public Function HojaMeta() As Worksheet
         ' La estructura del libro está protegida (para que nadie cree hojas de
         ' cotización). Aquí sí necesitamos crear una hoja de SISTEMA: avisamos
         ' con la bandera para que Workbook_NewSheet no la borre.
+        ' 2026-11-09: con manejador de errores. Antes, si Add fallaba (p. ej.
+        ' contraseña distinta), la bandera quedaba en True para siempre y
+        ' Workbook_NewSheet dejaba de bloquear hojas nuevas.
+        Dim activaAntes As Object
+        Set activaAntes = ActiveSheet
+        On Error GoTo fallo
         gCreandoHojaSistema = True
         DesprotegerEstructura
 
@@ -55,7 +96,11 @@ Public Function HojaMeta() As Worksheet
         ws.Range("A1").Value = "PROYECTO"
         ws.Range("A2").Value = "UUID"
         ws.Range("A3").Value = "ACTUALIZADO"
+        ws.Range("A4").Value = "ARCHIVO"
         ws.Range("D1").Value = ""        ' D:H = registro de posiciones de botones
+        ws.Visible = xlSheetVeryHidden
+        If Not activaAntes Is Nothing Then activaAntes.Activate   ' Add activa la hoja nueva
+        On Error GoTo 0
     End If
 
     On Error Resume Next
@@ -67,6 +112,28 @@ Public Function HojaMeta() As Worksheet
         gCreandoHojaSistema = False
     End If
 
+    Set HojaMeta = ws
+    Exit Function
+
+fallo:
+    Dim numErr As Long, descErr As String
+    numErr = Err.Number: descErr = Err.Description
+    On Error Resume Next
+    ' Si la hoja alcanzó a crearse pero no se pudo nombrar, se descarta.
+    If Not ws Is Nothing Then
+        If ws.Name <> "Meta" Then
+            Application.DisplayAlerts = False
+            ws.Delete
+            Application.DisplayAlerts = True
+            Set ws = Nothing
+        End If
+    End If
+    ProtegerEstructura
+    gCreandoHojaSistema = False
+    On Error GoTo 0
+    MsgBox "No se pudo crear la hoja de sistema «Meta» (" & numErr & "):" & vbCrLf & descErr & _
+           vbCrLf & vbCrLf & "Verifica que la protección del libro use la contraseña de las macros.", _
+           vbCritical, "Hoja Meta"
     Set HojaMeta = ws
 End Function
 
@@ -97,6 +164,7 @@ Public Sub AsegurarUUIDCotizacion()
     End If
 
     Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Sub
     proyGuardado = Trim$(CStr(meta.Range("B1").Value))
     uuidGuardado = Trim$(CStr(meta.Range("B2").Value))
 
@@ -106,6 +174,7 @@ Public Sub AsegurarUUIDCotizacion()
         meta.Range("B1").Value = proyecto
         meta.Range("B2").Value = uuidGuardado
         meta.Range("B3").Value = Now
+        RegistrarArchivoEnMeta meta
     ElseIf StrComp(proyGuardado, proyecto, vbTextCompare) <> 0 Then
         ' El nombre de proyecto cambió. Para evitar perder el folio por una simple
         ' corrección ortográfica o tipográfica, preguntamos al usuario si desea conservar el UUID:
@@ -122,6 +191,7 @@ Public Sub AsegurarUUIDCotizacion()
             meta.Range("B1").Value = proyecto
             meta.Range("B2").Value = uuidGuardado
             meta.Range("B3").Value = Now
+            RegistrarArchivoEnMeta meta
         Else
             ' Conservar el UUID existente y actualizar solo el nombre en Meta
             meta.Range("B1").Value = proyecto
@@ -136,6 +206,92 @@ Public Sub AsegurarUUIDCotizacion()
         ws.Range("K4").Value = uuidGuardado
     End If
 End Sub
+
+' ============================================================
+'  DETECCIÓN DE COPIA DE ARCHIVO (bug 2, 2026-11-09)
+' ============================================================
+' Al copiar el .xlsm la copia hereda el UUID de Meta: dos cotizaciones con el
+' mismo ID. Meta!B4 guarda el NOMBRE del archivo dueño del UUID. Si al abrir el
+' nombre no coincide, se pregunta si es una cotización nueva.
+' Se compara solo el nombre (no la ruta completa) para no preguntar cada vez que
+' el archivo llega por correo, se abre desde OneDrive/SharePoint o se mueve de
+' carpeta. Limitación: una copia con el MISMO nombre en otra carpeta no se
+' detecta.
+
+Public Sub RegistrarArchivoEnMeta(Optional ByVal meta As Worksheet)
+    If meta Is Nothing Then Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Sub
+    If Len(ThisWorkbook.Path) = 0 Then Exit Sub     ' libro sin guardar: aún no tiene nombre real
+    meta.Range("A4").Value = "ARCHIVO"
+    If CStr(meta.Range("B4").Value) <> ThisWorkbook.Name Then meta.Range("B4").Value = ThisWorkbook.Name
+End Sub
+
+' Se llama desde Workbook_Open ANTES de AsegurarUUIDCotizacion, y desde
+' Workbook_AfterSave (con guardarAlTerminar = True) para resolver un
+' "Guardar como" en ese momento y volver a guardar el archivo ya corregido.
+Public Sub VerificarCopiaDeArchivo(Optional ByVal guardarAlTerminar As Boolean = False)
+    Dim eventos As Boolean
+    If Not VerificarCopiaInterno() Then Exit Sub
+    If Not guardarAlTerminar Then Exit Sub
+    eventos = Application.EnableEvents
+    On Error Resume Next
+    Application.EnableEvents = False     ' sin BeforeSave/AfterSave recursivos
+    ThisWorkbook.Save
+    Application.EnableEvents = eventos
+    On Error GoTo 0
+End Sub
+
+' Devuelve True si escribió algo en Meta/K4.
+Private Function VerificarCopiaInterno() As Boolean
+    Dim ws As Worksheet, meta As Worksheet
+    Dim archivoReg As String, uuidReg As String, nuevo As String
+    Dim msg As String
+
+    Set ws = HojaCotizacion()
+    If ws Is Nothing Then Exit Function
+    If Len(ThisWorkbook.Path) = 0 Then Exit Function
+    If Len(Trim$(CStr(ws.Range("C4").Value))) = 0 Then Exit Function  ' sin proyecto no hay identidad
+
+    Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Function
+    uuidReg = Trim$(CStr(meta.Range("B2").Value))
+    If Len(uuidReg) = 0 Then Exit Function             ' todavía no hay UUID que duplicar
+    archivoReg = Trim$(CStr(meta.Range("B4").Value))
+
+    ' Libros creados antes de este cambio: se adopta el nombre actual sin preguntar.
+    If Len(archivoReg) = 0 Then
+        RegistrarArchivoEnMeta meta
+        VerificarCopiaInterno = True
+        Exit Function
+    End If
+    If StrComp(archivoReg, ThisWorkbook.Name, vbTextCompare) = 0 Then Exit Function
+    VerificarCopiaInterno = True
+
+    msg = "Este archivo tiene el ID Cotización de otro archivo:" & vbCrLf & vbCrLf & _
+          "  • Archivo original: " & archivoReg & vbCrLf & _
+          "  • Este archivo:     " & ThisWorkbook.Name & vbCrLf & _
+          "  • ID Cotización:    " & uuidReg & vbCrLf & vbCrLf & _
+          "¿Es una COTIZACIÓN NUEVA (copia del archivo)?" & vbCrLf & vbCrLf & _
+          "  [Sí]  -> Asignar un ID nuevo a este archivo." & vbCrLf & _
+          "  [No]  -> Es la misma cotización (solo se renombró o se guardó como)."
+
+    If MsgBox(msg, vbYesNo + vbQuestion, "¿Cotización copiada?") = vbYes Then
+        nuevo = GENERAR_UUID()
+        meta.Range("B1").Value = Trim$(CStr(ws.Range("C4").Value))
+        meta.Range("B2").Value = nuevo
+        meta.Range("B3").Value = Now
+        RegistrarArchivoEnMeta meta
+        Dim eventos As Boolean
+        eventos = Application.EnableEvents
+        Application.EnableEvents = False
+        ws.Range("K4").NumberFormat = "@"
+        ws.Range("K4").Value = nuevo
+        Application.EnableEvents = eventos
+        MsgBox "Nuevo ID Cotización asignado:" & vbCrLf & nuevo, vbInformation, "ID Cotización"
+    Else
+        RegistrarArchivoEnMeta meta
+    End If
+End Function
 
 ' Vigilante del ID Cotización. Se llama desde Worksheet_Change de la hoja
 ' Cotización y cubre los dos casos:

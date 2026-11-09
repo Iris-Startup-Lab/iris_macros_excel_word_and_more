@@ -1,5 +1,38 @@
 # Registro de Tareas y Cambios — Azteca Estudios Macro
 
+## [2026-11-09] Corrección — Bug 2: UUID duplicado al copiar el archivo
+
+- **Problema:** una copia del `.xlsm` heredaba el UUID de `Meta!B2`; con el mismo proyecto, dos cotizaciones compartían ID.
+- **Corrección:** `Meta!B4` guarda el nombre del archivo dueño del UUID (`RegistrarArchivoEnMeta`). `VerificarCopiaDeArchivo` corre en `Workbook_Open` y en el nuevo `Workbook_AfterSave`; si el nombre no coincide pregunta si es cotización nueva (Sí → UUID nuevo; No → adopta el nombre). Tras "Guardar como" vuelve a guardar en silencio.
+- **Limitación:** se compara el nombre, no la ruta (para no preguntar al abrir desde correo/OneDrive); una copia con el mismo nombre en otra carpeta no se detecta.
+- **Archivos:** `asignar_uuid_cotizacion.vb`, `bas/asignar_uuid_cotizacion.bas`, `eventos_uuid.vb`.
+
+## [2026-11-09] Corrección — Bug 6: detección frágil de rótulos
+
+- **Problema:** bastaba que un concepto contuviera "SUMA" ("Consumables"), "IVA" ("Activación") o "ITEM" para cortar bloques, detener la limpieza o pisar totales.
+- **Corrección:** helpers públicos `NormalizarRotulo` (sin acentos/espacios/`:`/`.`) y `EtiquetaTotal` (prefijo `SUBTOTAL`/`IVA`/`TOTAL`) en `M_Blindaje`. `SUMA TOTAL` se compara exacto. Aplicado en `suma`, `EsFilaEstructural`, `ValidarFilaEnBloque`, `BuscarFilaSubtotal`, `LimpiarCotizacion`, `BorrarFilaSeleccionada` y `DuplicarBloque`. `suma` ahora inicia en `FILA_INICIO`, ignora celdas con error y recorre la columna I hasta su última fila real.
+- **Archivos:** `blindaje_botones.vb`/`.bas`, `recalculo_automatico.vb`/`bas/M_Recalculo.bas`, `suma.vb`, `limpiar_cotizacion.vb`, `borrar_fila_seleccionada.vb`, `duplicar_bloque.vb` (legacy).
+
+## [2026-11-09] Corrección — Bug 8: bandera gCreandoHojaSistema atascada
+
+- **Problema:** si `Worksheets.Add` fallaba en `HojaMeta`, la bandera quedaba en `True` y `Workbook_NewSheet` dejaba de bloquear hojas.
+- **Corrección:** manejador `fallo:` que baja la bandera, reprotege, borra la hoja a medio crear y avisa. `HojaMeta` puede devolver `Nothing`; los llamadores (`AsegurarUUIDCotizacion`, `GuardarPosicionesBotones`, `RestaurarPosicionesBotones`, `LimpiarBotonesDuplicados`) ahora lo verifican. Además restaura la hoja activa tras crear `Meta`.
+- **Archivos:** `asignar_uuid_cotizacion.vb`/`.bas`, `blindaje_botones.vb`/`.bas`.
+
+## [2026-11-09] Corrección — Bug 9: errores ocultos y respaldo en M_BasePlantilla
+
+- **Problema:** el manejador de `OcultarBasePlantilla` leía `Err` después de reiniciarlo (el mensaje nunca salía); `CrearRespaldoRotativo` borraba el respaldo anterior antes de crear el nuevo.
+- **Corrección:** se captura `Err` antes de reiniciarlo; el respaldo nuevo se escribe a un temporal y solo si salió bien reemplaza al anterior. `VersionMBasePlantilla = 2026-11-09-RESPALDO-SEGURO`.
+- **Archivos:** `base_plantilla.vb`, `bas/M_BasePlantilla.bas`.
+
+## [2026-11-09] Corrección — Bug 10: detalles menores
+
+- **`HojaQueContiene`:** ahora sí ignora acentos y espacios, prioriza coincidencia exacta y nunca devuelve hojas de sistema (`Meta`, `_...`).
+- **`RestaurarPosicionesBotones`:** respeta el `ScreenUpdating` de quien llama.
+- **Eventos:** `On Error Resume Next` reemplazado por `On Error GoTo fallo` + `RegistrarError`, que anota fecha/origen/número/descripción en `Meta!J:M` (últimos 200).
+- **Archivos:** `asignar_uuid_cotizacion.vb`/`.bas`, `blindaje_botones.vb`/`.bas`, `eventos_uuid.vb`.
+- **Pendiente:** probar todo en Excel.
+
 ## [2026-11-09] Corrección — Bug 1: ID Cotización escrito a mano sin proyecto
 
 - **Problema:** con `C4` vacío, un texto escrito en `K4` se conservaba y los PDFs se generaban con ese ID inventado.

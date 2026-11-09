@@ -17,7 +17,7 @@ Option Explicit
 Private Const NOMBRE_BASE As String = "_BaseAE"
 
 Public Function VersionMBasePlantilla() As String
-    VersionMBasePlantilla = "2026-11-09-COMMENTS-LEFT"
+    VersionMBasePlantilla = "2026-11-09-RESPALDO-SEGURO"
 End Function
 
 ' ============================================================
@@ -158,13 +158,17 @@ Public Sub OcultarBasePlantilla()
 
 salir:
     gCreandoHojaSistema = False
+    ' 2026-11-09: se captura el error ANTES de On Error Resume Next / GoTo 0,
+    ' que reinician Err (antes el mensaje nunca aparecía).
+    Dim numErr As Long, descErr As String
+    numErr = Err.Number: descErr = Err.Description
     On Error Resume Next
     ProtegerEstructura
     Application.ScreenUpdating = pantalla
     Application.EnableEvents = eventos
     On Error GoTo 0
-    If Err.Number <> 0 Then
-        MsgBox "No se pudo ocultar la base: " & Err.Description, vbCritical, "Base de plantilla"
+    If numErr <> 0 Then
+        MsgBox "No se pudo ocultar la base (" & numErr & "): " & descErr, vbCritical, "Base de plantilla"
     End If
 End Sub
 
@@ -563,7 +567,7 @@ Private Sub AsegurarAvisoA1(ByVal ws As Worksheet)
 End Sub
 
 Private Function CrearRespaldoRotativo() As String
-    Dim carpeta As String, nombreBase As String, ruta As String
+    Dim carpeta As String, nombreBase As String, ruta As String, rutaTmp As String
 
     If Len(ThisWorkbook.Path) = 0 Then
         MsgBox "Guarda el libro antes de crear la nueva cotización.", vbExclamation, "Nueva cotización"
@@ -588,23 +592,30 @@ Private Function CrearRespaldoRotativo() As String
     End If
 
     ruta = carpeta & "\" & nombreBase & "_ULTIMO_RESPALDO.xlsm"
+    rutaTmp = carpeta & "\" & nombreBase & "_RESPALDO_NUEVO.tmp.xlsm"
 
-    If Dir(ruta) <> "" Then Kill ruta
-    If Err.Number <> 0 Then
-        MsgBox "No se pudo reemplazar el respaldo anterior: " & Err.Description & vbCrLf & _
-               "No se restauró nada.", vbCritical, "Nueva cotización"
+    ' 2026-11-09: primero se escribe el respaldo NUEVO en un archivo temporal y
+    ' solo si salió bien se reemplaza el anterior. Antes se borraba el anterior
+    ' primero: si SaveCopyAs fallaba, no quedaba ningún respaldo.
+    If Dir(rutaTmp) <> "" Then Kill rutaTmp
+    Err.Clear
+    ThisWorkbook.SaveCopyAs rutaTmp
+    If Err.Number <> 0 Or Dir(rutaTmp) = "" Then
+        MsgBox "No se pudo crear el respaldo: " & Err.Description & vbCrLf & _
+               "Se conserva el respaldo anterior. No se restauró nada.", vbCritical, "Nueva cotización"
         Err.Clear
         On Error GoTo 0
         Exit Function
     End If
 
-    ThisWorkbook.SaveCopyAs ruta
+    If Dir(ruta) <> "" Then Kill ruta
+    If Err.Number = 0 Then Name rutaTmp As ruta
     If Err.Number <> 0 Then
-        MsgBox "No se pudo crear el respaldo: " & Err.Description & vbCrLf & _
-               "No se restauró nada.", vbCritical, "Nueva cotización"
+        ' El respaldo nuevo existe con nombre temporal: se usa ese.
+        MsgBox "No se pudo renombrar el respaldo (" & Err.Description & ")." & vbCrLf & _
+               "Quedó guardado como:" & vbCrLf & rutaTmp, vbExclamation, "Nueva cotización"
         Err.Clear
-        On Error GoTo 0
-        Exit Function
+        ruta = rutaTmp
     End If
 
     On Error GoTo 0

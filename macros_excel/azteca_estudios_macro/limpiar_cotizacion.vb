@@ -9,8 +9,7 @@ Sub LimpiarCotizacion()
     Dim ws As Worksheet
     Dim i As Long
     Dim ultimaFila As Long
-    Dim texto As String
-    Dim textoNorm As String
+    Dim etiquetaA As String
     Dim pantalla As Boolean
 
     Set ws = HojaCotizacion()
@@ -37,12 +36,12 @@ Sub LimpiarCotizacion()
 
     For i = FILA_INICIO To ultimaFila
 
-        texto = Trim(CStr(ws.Cells(i, "A").Value))
-        textoNorm = Replace(Replace(UCase(texto), ":", ""), " ", "")
-
-        ' Si llegamos al área de totales finales, detenemos la limpieza
-        If InStr(textoNorm, "IVA") > 0 Or InStr(textoNorm, "SUBTOTAL") > 0 Then Exit For
-        If InStr(UCase(Trim(CStr(ws.Cells(i, "I").Value))), "SUBTOTAL") > 0 Then Exit For
+        ' Si llegamos al área de totales finales, detenemos la limpieza.
+        ' 2026-11-09: por prefijo exacto; antes un concepto como "Activación"
+        ' (contiene "IVA") detenía la limpieza a media cotización.
+        etiquetaA = EtiquetaTotal(ws.Cells(i, "A").Value)
+        If etiquetaA = "IVA" Or etiquetaA = "SUBTOTAL" Then Exit For
+        If EtiquetaTotal(ws.Cells(i, "I").Value) = "SUBTOTAL" Then Exit For
 
         ' No tocar filas de suma, títulos de categoría combinados ni encabezados
         If Not EsFilaEstructural(ws, i) Then

@@ -100,6 +100,7 @@ Public Sub GuardarPosicionesBotones()
         Exit Sub
     End If
     Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Sub
 
     FijarBotones ws
 
@@ -132,10 +133,12 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
     Dim reg As Object
     Dim r As Long, movidos As Long, huerfanos As Long
     Dim L As Double, T As Double, W As Double, H As Double
+    Dim pantalla As Boolean
 
     Set ws = HojaCotizacion()
     If ws Is Nothing Then Exit Sub
     Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Sub
 
     Set reg = CreateObject("Scripting.Dictionary")
     r = FILA_REG
@@ -185,6 +188,9 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
     End If
 
     ' --- Segunda pasada: reacomodar ---
+    ' Se respeta el ScreenUpdating de quien llama (antes se forzaba a True y
+    ' "descongelaba" la pantalla a media macro).
+    pantalla = Application.ScreenUpdating
     Application.ScreenUpdating = False
     DesbloquearBotones ws
     On Error Resume Next
@@ -201,7 +207,7 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
     Next sh
     On Error GoTo 0
     BloquearBotones ws
-    Application.ScreenUpdating = True
+    Application.ScreenUpdating = pantalla
 
     If Not silencioso Then
         MsgBox movidos & " objeto(s) devueltos a su posición registrada." & _
@@ -221,6 +227,7 @@ Public Sub LimpiarBotonesDuplicados()
     Set ws = HojaCotizacion()
     If ws Is Nothing Then Exit Sub
     Set meta = HojaMeta()
+    If meta Is Nothing Then Exit Sub
 
     Set reg = CreateObject("Scripting.Dictionary")
     r = FILA_REG
@@ -394,10 +401,8 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
 
     filaFinTotales = ultimaFila + 1
     For r = FILA_INICIO To ultimaFila + 20
-        Dim txtI As String, txtA As String
-        txtI = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "I").Value)), ".", ""), " ", ""))
-        txtA = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "A").Value)), ".", ""), " ", ""))
-        If InStr(txtI, "SUBTOTAL") > 0 Or InStr(txtA, "SUBTOTAL") > 0 Then
+        If EtiquetaTotal(ws.Cells(r, "I").Value) = "SUBTOTAL" Or _
+           EtiquetaTotal(ws.Cells(r, "A").Value) = "SUBTOTAL" Then
             filaFinTotales = r
             Exit For
         End If
@@ -419,15 +424,83 @@ End Function
 ' Indica si la fila es ESTRUCTURAL (SUMA TOTAL, título de categoría combinado
 ' o encabezado de columnas). Esas filas no se copian ni se borran con los
 ' botones de fila, porque duplicarlas descuadra los totales.
+' 2026-11-09: compara por coincidencia exacta / prefijo. Antes bastaba con que
+' un concepto CONTUVIERA "SUMA" ("Consumables") o "ITEM" para bloquearlo.
 Public Function EsFilaEstructural(ByVal ws As Worksheet, ByVal fila As Long) As Boolean
-    Dim textoNorm As String
-    textoNorm = Replace(Replace(UCase$(Trim$(CStr(ws.Cells(fila, "A").Value))), ":", ""), " ", "")
+    Dim t As String
+    t = NormalizarRotulo(ws.Cells(fila, "A").Value)
 
-    If InStr(1, textoNorm, "SUMA") > 0 Then EsFilaEstructural = True: Exit Function
+    If t = "SUMATOTAL" Then EsFilaEstructural = True: Exit Function
     If ws.Cells(fila, "A").MergeArea.Columns.Count > 1 Then EsFilaEstructural = True: Exit Function
-    If InStr(textoNorm, "DESCRIP") > 0 Or InStr(textoNorm, "PRECIO") > 0 Or _
-       InStr(textoNorm, "CANTIDAD") > 0 Or InStr(textoNorm, "ITEM") > 0 Then
+    If Left$(t, 7) = "DESCRIP" Or Left$(t, 6) = "PRECIO" Or _
+       Left$(t, 8) = "CANTIDAD" Or t = "ITEM" Or t = "ITEMS" Then
         EsFilaEstructural = True
     End If
 End Function
+
+
+' ============================================================
+'  5) RÓTULOS NORMALIZADOS (compartidos por suma, limpiar, etc.)
+' ============================================================
+
+' Mayúsculas, sin acentos, sin espacios, sin ":" ni ".". Tolera errores de
+' celda (#N/A, #¡VALOR!) devolviendo "".
+Public Function NormalizarRotulo(ByVal v As Variant) As String
+    Dim t As String
+    If IsError(v) Then Exit Function
+    t = UCase$(Trim$(CStr(v)))
+    t = Replace(t, "Á", "A"): t = Replace(t, "É", "E"): t = Replace(t, "Í", "I")
+    t = Replace(t, "Ó", "O"): t = Replace(t, "Ú", "U"): t = Replace(t, "Ü", "U")
+    t = Replace(t, " ", ""): t = Replace(t, ":", ""): t = Replace(t, ".", "")
+    t = Replace(t, Chr$(160), "")   ' espacio duro (pegado desde web/Word)
+    NormalizarRotulo = t
+End Function
+
+' Clasifica un rótulo de la columna I: "SUBTOTAL", "IVA", "TOTAL" o "".
+' Usa PREFIJO para tolerar "IVA (16%)" o "TOTAL MXN", pero ya no detecta
+' "IVA" a media palabra.
+Public Function EtiquetaTotal(ByVal v As Variant) As String
+    Dim t As String
+    t = NormalizarRotulo(v)
+    If Left$(t, 8) = "SUBTOTAL" Then
+        EtiquetaTotal = "SUBTOTAL"
+    ElseIf Left$(t, 3) = "IVA" Then
+        EtiquetaTotal = "IVA"
+    ElseIf Left$(t, 5) = "TOTAL" Then
+        EtiquetaTotal = "TOTAL"
+    End If
+End Function
+
+
+' ============================================================
+'  6) REGISTRO DE ERRORES (para los eventos con manejo silencioso)
+' ============================================================
+
+' Anota el error en Meta!J:M (fecha, origen, número, descripción) sin
+' interrumpir al usuario. Conserva los últimos 200 registros.
+Public Sub RegistrarError(ByVal origen As String, ByVal numero As Long, ByVal descripcion As String)
+    Const COL_LOG As Long = 10      ' J
+    Const MAX_LOG As Long = 200
+    Dim meta As Worksheet
+    Dim fila As Long
+    Dim eventos As Boolean
+
+    If numero = 0 Then Exit Sub
+    eventos = Application.EnableEvents
+    On Error Resume Next
+    Application.EnableEvents = False
+    Set meta = HojaMeta()
+    If Not meta Is Nothing Then
+        If Len(CStr(meta.Cells(1, COL_LOG).Value)) = 0 Then
+            meta.Cells(1, COL_LOG).Resize(1, 4).Value = Array("FECHA", "ORIGEN", "ERROR", "DESCRIPCION")
+        End If
+        fila = meta.Cells(meta.Rows.Count, COL_LOG).End(xlUp).Row + 1
+        If fila > MAX_LOG + 1 Then
+            meta.Rows(2).Columns("J:M").Delete Shift:=xlUp
+            fila = MAX_LOG + 1
+        End If
+        meta.Cells(fila, COL_LOG).Resize(1, 4).Value = Array(Now, origen, numero, descripcion)
+    End If
+    Application.EnableEvents = eventos
+End Sub
 

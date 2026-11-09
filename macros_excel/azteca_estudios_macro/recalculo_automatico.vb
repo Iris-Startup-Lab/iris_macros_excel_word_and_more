@@ -74,17 +74,16 @@ End Sub
 
 Private Function BuscarFilaSubtotal(ByVal ws As Worksheet) As Long
     Dim ultima As Long, r As Long
-    Dim a As String, i As String
 
     ultima = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If ws.Cells(ws.Rows.Count, "I").End(xlUp).Row > ultima Then
         ultima = ws.Cells(ws.Rows.Count, "I").End(xlUp).Row
     End If
 
+    ' 2026-11-09: rótulo por prefijo exacto (EtiquetaTotal, M_Blindaje).
     For r = FILA_INICIO To ultima + 20
-        a = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "A").Value)), ".", ""), " ", ""))
-        i = UCase$(Replace(Replace(Trim$(CStr(ws.Cells(r, "I").Value)), ".", ""), " ", ""))
-        If InStr(a, "SUBTOTAL") > 0 Or InStr(i, "SUBTOTAL") > 0 Then
+        If EtiquetaTotal(ws.Cells(r, "A").Value) = "SUBTOTAL" Or _
+           EtiquetaTotal(ws.Cells(r, "I").Value) = "SUBTOTAL" Then
             BuscarFilaSubtotal = r
             Exit Function
         End If

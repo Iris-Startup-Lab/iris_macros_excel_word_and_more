@@ -208,7 +208,9 @@ Ambas rutinas son idempotentes y no marcan el libro como modificado si no hay na
 | Proyecto atado al UUID | `Meta!B1` |
 | **UUID vigente (fuente de la verdad)** | `Meta!B2` |
 | Fecha/hora de asignación | `Meta!B3` |
+| Archivo dueño del UUID (detección de copias) | `Meta!B4` (nombre del `.xlsm`) |
 | Registro de posición de botones | `Meta!D:H` (`nombre`, `Left`, `Top`, `Width`, `Height`) |
+| Bitácora de errores de eventos | `Meta!J:M` (`fecha`, `origen`, `número`, `descripción`; últimos 200) |
 
 ### 5. Reglas de Protección
 
