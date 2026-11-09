@@ -1,15 +1,16 @@
 Attribute VB_Name = "M_PDF"
-' Autor: Fernando Dorantes Nieto
+' Autores: Fernando Dorantes Nieto
+' Diana Berumen Estrada
 '
-' MÓDULO: M_PDF
-' Propósito: con un solo clic generar DOS PDFs de la cotización:
+' Mï¿½DULO: M_PDF
+' Propï¿½sito: con un solo clic generar DOS PDFs de la cotizaciï¿½n:
 '   1) *_Detalle.pdf  -> todo visible (el cliente ve el detalle completo).
 '   2) *_Resumen.pdf  -> se ocultan las filas de detalle marcadas ("D" en col O).
 '
-' El nombre de archivo incluye el UUID (ID Cotización), de modo que archivo e
+' El nombre de archivo incluye el UUID (ID Cotizaciï¿½n), de modo que archivo e
 ' identificador interno siempre coinciden. Los totales (SUMA TOTAL, SUBTOTAL,
-' IVA, TOTAL) NO cambian al colapsar: son valores ya calculados, así que el
-' Resumen muestra menos líneas pero el mismo total.
+' IVA, TOTAL) NO cambian al colapsar: son valores ya calculados, asï¿½ que el
+' Resumen muestra menos lï¿½neas pero el mismo total.
 '
 ' Depende de: HojaCotizacion(), AsegurarUUIDCotizacion() (M_UUID)
 '             MostrarTodo(), OcultarDetalle() (M_Esquema).
@@ -25,18 +26,18 @@ Public Sub GenerarPDFsCotizacion()
     Dim i As Long
     Set ws = HojaCotizacion()
     If ws Is Nothing Then
-        MsgBox "No se encontró la hoja de Cotización.", vbCritical, "Error"
+        MsgBox "No se encontrï¿½ la hoja de Cotizaciï¿½n.", vbCritical, "Error"
         Exit Sub
     End If
 
-    ' Validar que el libro esté guardado en disco
+    ' Validar que el libro estï¿½ guardado en disco
     If Len(ThisWorkbook.Path) = 0 Then
         MsgBox "Por favor, guarda el libro de Excel en tu computadora antes de generar los PDFs." & vbCrLf & _
                "(Archivo > Guardar como...)", vbExclamation, "Libro no guardado"
         Exit Sub
     End If
 
-    ' Eliminar cualquier combo temporal del catálogo antes de exportar
+    ' Eliminar cualquier combo temporal del catï¿½logo antes de exportar
     On Error Resume Next
     DesbloquearBotones ws
     For i = ws.Shapes.Count To 1 Step -1
@@ -47,10 +48,10 @@ Public Sub GenerarPDFsCotizacion()
     BloquearBotones ws
     On Error GoTo 0
 
-    ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto
+    ' Garantiza que el UUID (K4) estï¿½ asignado y sea consistente con el proyecto
     AsegurarUUIDCotizacion
 
-    ' Recálculo automático: asegura que todos los totales reflejen los datos actuales
+    ' Recï¿½lculo automï¿½tico: asegura que todos los totales reflejen los datos actuales
     On Error Resume Next
     Call suma
     On Error GoTo 0
@@ -76,16 +77,16 @@ Public Sub GenerarPDFsCotizacion()
         fechaCot = LimpiarNombre(CStr(ws.Range("K3").Value))
     End If
 
-    ' Sin proyecto no hay identidad: se valida C4, no K4 (K4 podría traer texto
+    ' Sin proyecto no hay identidad: se valida C4, no K4 (K4 podrï¿½a traer texto
     ' escrito a mano). Y el ID debe ser exactamente el guardado en Meta.
     If Len(proyecto) = 0 Then
         MsgBox "Falta el nombre del proyecto (C4) para poder asignar el ID/UUID.", vbExclamation, "Datos incompletos"
         Exit Sub
     End If
     If Len(uuid) = 0 Or StrComp(uuid, UUIDGuardado(), vbTextCompare) <> 0 Then
-        MsgBox "El ID Cotización (K4) no coincide con el registrado para este proyecto." & vbCrLf & _
+        MsgBox "El ID Cotizaciï¿½n (K4) no coincide con el registrado para este proyecto." & vbCrLf & _
                "No se generaron los PDFs. Vuelve a escribir el nombre del proyecto en C4.", _
-               vbExclamation, "ID Cotización inválido"
+               vbExclamation, "ID Cotizaciï¿½n invï¿½lido"
         Exit Sub
     End If
 
@@ -97,7 +98,7 @@ Public Sub GenerarPDFsCotizacion()
     ultima = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If ultima < FILA_INICIO Then ultima = FILA_INICIO
 
-    ' Guardamos el estado de colapso ACTUAL del usuario (lo que dejó oculto a
+    ' Guardamos el estado de colapso ACTUAL del usuario (lo que dejï¿½ oculto a
     ' mano o con los botones), para que el RESUMEN lo respete tal cual.
     Dim estado() As Boolean
     ReDim estado(FILA_INICIO To ultima)
@@ -105,7 +106,7 @@ Public Sub GenerarPDFsCotizacion()
         estado(i) = ws.Rows(i).EntireRow.Hidden
     Next i
 
-    ' A partir de aquí la hoja se altera (filas ocultas, resalto): cualquier
+    ' A partir de aquï¿½ la hoja se altera (filas ocultas, resalto): cualquier
     ' error inesperado debe regresarla al estado del usuario.
     On Error GoTo ErrorInesperado
     Application.ScreenUpdating = False
@@ -117,7 +118,7 @@ Public Sub GenerarPDFsCotizacion()
         GoTo FinalizarConError
     End If
 
-    ' 2) RESUMEN: se restaura EXACTAMENTE lo que el usuario tenía colapsado.
+    ' 2) RESUMEN: se restaura EXACTAMENTE lo que el usuario tenï¿½a colapsado.
     For i = FILA_INICIO To ultima
         ws.Rows(i).EntireRow.Hidden = estado(i)
     Next i
@@ -133,8 +134,8 @@ Public Sub GenerarPDFsCotizacion()
     MsgBox "PDFs generados exitosamente en la carpeta del libro:" & vbCrLf & vbCrLf & _
            "  " & baseNombre & "_Detalle.pdf" & vbCrLf & _
            "  " & baseNombre & "_Resumen.pdf" & vbCrLf & vbCrLf & _
-           "ID Cotización (UUID): " & uuid & vbCrLf & vbCrLf & _
-           "Se abrirá el PDF de Detalle.", vbInformation, "Exportación Dual Exitosa"
+           "ID Cotizaciï¿½n (UUID): " & uuid & vbCrLf & vbCrLf & _
+           "Se abrirï¿½ el PDF de Detalle.", vbInformation, "Exportaciï¿½n Dual Exitosa"
 
     On Error Resume Next
     ThisWorkbook.FollowHyperlink ruta & baseNombre & "_Detalle.pdf"
@@ -146,13 +147,13 @@ Public Sub GenerarPDFsCotizacion()
     Exit Sub
 
 ErrorInesperado:
-    MsgBox "Ocurrió un error inesperado al preparar los PDFs (" & Err.Number & "):" & vbCrLf & _
-           Err.Description & vbCrLf & vbCrLf & "La hoja se regresó a como estaba.", _
+    MsgBox "Ocurriï¿½ un error inesperado al preparar los PDFs (" & Err.Number & "):" & vbCrLf & _
+           Err.Description & vbCrLf & vbCrLf & "La hoja se regresï¿½ a como estaba.", _
            vbCritical, "Error al generar PDFs"
     Resume FinalizarConError
 
 FinalizarConError:
-    ' Restaurar estado de filas y resalto si ocurrió un error durante la exportación
+    ' Restaurar estado de filas y resalto si ocurriï¿½ un error durante la exportaciï¿½n
     On Error Resume Next
     For i = FILA_INICIO To ultima
         ws.Rows(i).EntireRow.Hidden = estado(i)
@@ -189,13 +190,13 @@ Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As 
         If numError = 1004 Then
             MsgBox "No se pudo generar el archivo PDF:" & vbCrLf & vbCrLf & _
                    "  " & archivo & vbCrLf & vbCrLf & _
-                   "Causas más comunes:" & vbCrLf & _
-                   "  • El PDF ya está abierto (Acrobat, Edge, navegador). Ciérralo." & vbCrLf & _
-                   "  • La carpeta es de solo lectura o está sincronizándose (OneDrive)." & vbCrLf & _
-                   "  • No hay una impresora predeterminada configurada en Windows." & vbCrLf & vbCrLf & _
-                   "Corrige y vuelve a presionar el botón.", vbCritical, "No se pudo exportar el PDF"
+                   "Causas mï¿½s comunes:" & vbCrLf & _
+                   "  ï¿½ El PDF ya estï¿½ abierto (Acrobat, Edge, navegador). Ciï¿½rralo." & vbCrLf & _
+                   "  ï¿½ La carpeta es de solo lectura o estï¿½ sincronizï¿½ndose (OneDrive)." & vbCrLf & _
+                   "  ï¿½ No hay una impresora predeterminada configurada en Windows." & vbCrLf & vbCrLf & _
+                   "Corrige y vuelve a presionar el botï¿½n.", vbCritical, "No se pudo exportar el PDF"
         Else
-            MsgBox "Ocurrió un error inesperado al generar el PDF (" & numError & "):" & vbCrLf & _
+            MsgBox "Ocurriï¿½ un error inesperado al generar el PDF (" & numError & "):" & vbCrLf & _
                    descError & vbCrLf & vbCrLf & "Archivo: " & archivo, vbCritical, "Error al exportar PDF"
         End If
         ExportarPDF = False
@@ -214,7 +215,7 @@ Private Function ArmarBaseNombre(ByVal cliente As String, ByVal proyecto As Stri
     ArmarBaseNombre = s
 End Function
 
-' ExportAsFixedFormat falla (1004) con rutas de más de ~218 caracteres. Si la
+' ExportAsFixedFormat falla (1004) con rutas de mï¿½s de ~218 caracteres. Si la
 ' ruta completa se pasa, se recortan cliente y proyecto (nunca el UUID).
 Private Sub AjustarLargoNombre(ByVal ruta As String, ByRef cliente As String, _
                                ByRef proyecto As String, ByVal uuid As String, _
@@ -232,7 +233,7 @@ Private Sub AjustarLargoNombre(ByVal ruta As String, ByRef cliente As String, _
         proyecto = Trim$(Left$(proyecto, Len(proyecto) - recorte))
         exceso = exceso - recorte
     End If
-    ' ...y luego el cliente, si todavía hace falta.
+    ' ...y luego el cliente, si todavï¿½a hace falta.
     If exceso > 0 Then
         recorte = exceso
         If recorte > Len(cliente) - 5 Then recorte = Len(cliente) - 5

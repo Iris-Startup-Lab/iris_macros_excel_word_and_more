@@ -1,3 +1,5 @@
+' Autores: Diana Berumen Estrada
+'
 ' MÓDULO: M_Producto
 ' Propósito: insertar filas de producto sin pegar formatos de fila completa,
 ' evitando el error de PasteSpecial en filas con combinaciones distintas.

@@ -1,5 +1,7 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
+' Diana Berumen Estrada
 ' Modificado con validación de contexto de fila
 Sub AgregarFilaFecha()
 

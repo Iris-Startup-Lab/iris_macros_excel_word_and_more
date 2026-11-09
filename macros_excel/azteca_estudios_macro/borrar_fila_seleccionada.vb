@@ -1,5 +1,6 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
 ' Modificado para validar contexto de celda activa, proteger encabezados y recalcular totales
 ' 2026-11-09: usa EsFilaEstructural (M_Blindaje) con coincidencia exacta; antes
 '             un concepto que contuviera "SUMA" o "ITEM" no se podía borrar.

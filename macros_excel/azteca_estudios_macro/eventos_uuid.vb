@@ -1,4 +1,5 @@
-' Autor: Fernando Dorantes Nieto
+' Autores: Fernando Dorantes Nieto
+' Diana Berumen Estrada
 '
 ' EVENTOS de la plantilla. OJO: este código NO va en un módulo normal.
 ' Se pega en dos objetos del proyecto VBA (ventana izquierda del editor):

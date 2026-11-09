@@ -1,4 +1,5 @@
-' Autor: Fernando Dorantes Nieto
+' Autores: Fernando Dorantes Nieto
+' Diana Berumen Estrada
 '
 ' MÓDULO: M_PDF
 ' Propósito: con un solo clic generar DOS PDFs de la cotización:

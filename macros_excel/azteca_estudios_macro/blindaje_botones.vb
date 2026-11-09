@@ -1,4 +1,5 @@
-' Autor: Fernando Dorantes Nieto
+' Autores: Fernando Dorantes Nieto
+' Diana Berumen Estrada
 '
 ' MÓDULO: M_Blindaje
 ' Propósito: blindar la plantilla contra tres fallas operativas reportadas:

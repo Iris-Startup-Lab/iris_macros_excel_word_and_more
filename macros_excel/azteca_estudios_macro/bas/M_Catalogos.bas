@@ -1,4 +1,6 @@
 Attribute VB_Name = "M_Catalogos"
+' Autores: Diana Berumen Estrada
+'
 ' MÓDULO: M_Catalogos
 ' Propósito:
 '   - Catálogo de Categorías: combo temporal a la izquierda del encabezado.

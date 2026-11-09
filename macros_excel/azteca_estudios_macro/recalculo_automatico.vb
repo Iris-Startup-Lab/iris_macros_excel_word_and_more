@@ -1,3 +1,6 @@
+' Autores: Diana Berumen Estrada
+' Fernando Dorantes Nieto
+'
 ' MÓDULO: M_Recalculo
 ' Propósito: recalcular automáticamente los subtotales de bloque y los totales
 ' generales cuando se editan o vacían celdas de productos/fechas en la hoja

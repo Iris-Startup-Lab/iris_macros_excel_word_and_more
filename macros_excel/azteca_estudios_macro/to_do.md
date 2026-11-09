@@ -1,5 +1,18 @@
 # Registro de Tareas y Cambios — Azteca Estudios Macro
 
+## [2026-11-09] Documentación — Actualización de autorías según los últimos 6 diffs
+
+- **Propósito:** incorporar y regularizar la autoría de Fernando Dorantes Nieto y Diana Berumen Estrada en todos los módulos y macros modificados o creados en los últimos 6 diffs/commits de Git.
+- **Criterio aplicado:**
+  - Si en el diff intervenía Diana (`Diana Berumen`), se añadió `Diana Berumen Estrada`.
+  - Si en el diff intervenía Fernando (`FerDoranNie`), se normalizó/añadió como `Fernando Dorantes Nieto`.
+  - Se mantuvo a los autores originales (`Azeneth Guadalupe Garcia Mendez` y `Javier Flores Martinez`) en las macros base/legacy donde aplique.
+- **Archivos actualizados (.vb y .bas):**
+  - Con Fernando Dorantes Nieto: `agregar_fila_item.vb`, `agregar_fila_producto.vb`, `borrar_fila_seleccionada.vb`, `duplicar_bloque.vb`, `limpiar_cotizacion.vb`, `propuesta_de_firma.md` (y `suma.vb` que ya contaba con él).
+  - Con Fernando Dorantes Nieto y Diana Berumen Estrada: `agregar_fila_fecha.vb`, `base_plantilla.vb` / `bas/M_BasePlantilla.bas`, `recalculo_automatico.vb` / `bas/M_Recalculo.bas`, `blindaje_botones.vb` / `bas/blindaje_botones.bas`, `generar_pdfs_resumen_detalle.vb` / `bas/generar_pdfs_resumen_detalle.bas`, `eventos_uuid.vb`.
+  - Con Diana Berumen Estrada: `catalogo_categorias.vb` / `bas/M_Catalogos.bas`, `producto_seguro.vb` / `bas/M_Producto.bas`.
+- **Sincronización:** se mantuvieron sincronizados los archivos `.bas` con codificación Windows-1252 y saltos CRLF.
+
 ## [2026-11-09] Propuesta — Firma digital y totales con fórmulas (pendiente de cliente)
 
 - **Documento:** `propuesta_de_firma.md`, con la firma digital (funcionamiento, efecto al abrir, opciones de certificado, procedimiento, riesgos y preguntas al cliente) y un anexo con los totales como fórmulas nativas.

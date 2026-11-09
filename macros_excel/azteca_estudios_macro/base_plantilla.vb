@@ -1,3 +1,6 @@
+' Autores: Diana Berumen Estrada
+' Fernando Dorantes Nieto
+'
 ' MÓDULO: M_BasePlantilla
 ' Propósito: guardar una copia limpia de la hoja Cotización en una hoja muy
 ' oculta (_BaseAE) y restaurar la cotización desde esa base cuando se requiera

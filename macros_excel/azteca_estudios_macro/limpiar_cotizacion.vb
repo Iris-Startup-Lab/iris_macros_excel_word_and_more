@@ -1,5 +1,6 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
 ' Modificado para confirmar acción, proteger títulos de categoría y recalcular a $0.00
 ' 2026-11-09: ya no usa ActiveSheet como respaldo (podía vaciar otra hoja) y no
 '             intenta limpiar parcialmente celdas combinadas (error 1004).

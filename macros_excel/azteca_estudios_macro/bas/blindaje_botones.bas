@@ -1,34 +1,35 @@
 Attribute VB_Name = "M_Blindaje"
-' Autor: Fernando Dorantes Nieto
+' Autores: Fernando Dorantes Nieto
+' Diana Berumen Estrada
 '
-' MÓDULO: M_Blindaje
-' Propósito: blindar la plantilla contra tres fallas operativas reportadas:
+' Mï¿½DULO: M_Blindaje
+' Propï¿½sito: blindar la plantilla contra tres fallas operativas reportadas:
 '
-'   1) LOS BOTONES SE MUEVEN / SE METEN AL ÁREA IMPRIMIBLE.
-'      Causa raíz: por omisión un objeto de Excel nace con
+'   1) LOS BOTONES SE MUEVEN / SE METEN AL ï¿½REA IMPRIMIBLE.
+'      Causa raï¿½z: por omisiï¿½n un objeto de Excel nace con
 '      Placement = xlMoveAndSize, es decir queda ATADO a las celdas que tiene
 '      debajo. Todas las macros de estructura hacen Rows(...).Insert /
-'      Rows(...).Delete, y además el esquema y el PDF Resumen ocultan filas.
-'      Cada una de esas operaciones arrastra el botón, lo aplasta o —cuando la
-'      inserción viene de un Rows(x).Copy— lo DUPLICA. De ahí que "se muevan
+'      Rows(...).Delete, y ademï¿½s el esquema y el PDF Resumen ocultan filas.
+'      Cada una de esas operaciones arrastra el botï¿½n, lo aplasta o ï¿½cuando la
+'      inserciï¿½n viene de un Rows(x).Copyï¿½ lo DUPLICA. De ahï¿½ que "se muevan
 '      cuando quieren".
-'      Solución: anclarlos (xlFreeFloating), guardar su posición correcta en la
-'      hoja Meta, poder devolverlos ahí en un clic, y proteger los objetos de
+'      Soluciï¿½n: anclarlos (xlFreeFloating), guardar su posiciï¿½n correcta en la
+'      hoja Meta, poder devolverlos ahï¿½ en un clic, y proteger los objetos de
 '      dibujo para que nadie los arrastre a mano.
-'      OJO: se protegen SOLO los objetos (Contents:=False), así que las celdas
+'      OJO: se protegen SOLO los objetos (Contents:=False), asï¿½ que las celdas
 '      siguen editables y ninguna macro existente se rompe.
 '
-'   2) SE BORRA EL ID COTIZACIÓN (K4)  ->  ver M_UUID.VigilarIDCotizacion.
+'   2) SE BORRA EL ID COTIZACIï¿½N (K4)  ->  ver M_UUID.VigilarIDCotizacion.
 '
-'   3) SE CREAN / COPIAN HOJAS DE COTIZACIÓN  ->  protección de ESTRUCTURA del
-'      libro (aquí) + evento Workbook_NewSheet (ver eventos_uuid.vb).
+'   3) SE CREAN / COPIAN HOJAS DE COTIZACIï¿½N  ->  protecciï¿½n de ESTRUCTURA del
+'      libro (aquï¿½) + evento Workbook_NewSheet (ver eventos_uuid.vb).
 '
-' Depende de: HojaCotizacion(), HojaMeta() (módulo M_UUID).
+' Depende de: HojaCotizacion(), HojaMeta() (mï¿½dulo M_UUID).
 
 Option Explicit
 
-' Contraseña de blindaje. CÁMBIALA por la de tu equipo antes de repartir el
-' archivo (y anótala: sin ella no se puede desproteger la estructura).
+' Contraseï¿½a de blindaje. Cï¿½MBIALA por la de tu equipo antes de repartir el
+' archivo (y anï¿½tala: sin ella no se puede desproteger la estructura).
 Public Const PWD_BLINDAJE As String = "AE2026"
 
 ' Bandera que usan las macros para crear hojas de sistema (p. ej. "Meta") sin
@@ -41,7 +42,7 @@ Private Const COL_REG As String = "D"
 Private Const FILA_REG As Long = 1
 Private Const TOLERANCIA As Double = 0.5      ' puntos; por debajo de esto no se toca nada
 
-' Los controles temporales del catálogo (TMP_...) no son botones del panel:
+' Los controles temporales del catï¿½logo (TMP_...) no son botones del panel:
 ' se ignoran al registrar posiciones y al buscar duplicados.
 Private Function EsObjetoTemporal(ByVal sh As Shape) As Boolean
     EsObjetoTemporal = (InStr(1, sh.Name, "TMP_", vbTextCompare) = 1)
@@ -49,7 +50,7 @@ End Function
 
 
 ' ============================================================
-'  1) ANCLAJE Y POSICIÓN DE LOS BOTONES
+'  1) ANCLAJE Y POSICIï¿½N DE LOS BOTONES
 ' ============================================================
 
 ' Deja todos los objetos de la hoja "libres": ya no se mueven, ni se aplastan,
@@ -63,7 +64,7 @@ Public Sub FijarBotones(Optional ByVal ws As Worksheet)
     If ws Is Nothing Then Exit Sub
     If ws.Shapes.Count = 0 Then Exit Sub
 
-    ' Nota: cuando la hoja está protegida con DrawingObjects:=True, incluso LEER
+    ' Nota: cuando la hoja estï¿½ protegida con DrawingObjects:=True, incluso LEER
     ' Sh.Placement puede lanzar error 1004. Por eso protegemos este loop con
     ' On Error Resume Next; si falla la lectura, asumimos que falta anclar.
     On Error Resume Next
@@ -89,15 +90,15 @@ Public Sub FijarBotones(Optional ByVal ws As Worksheet)
     BloquearBotones ws
 End Sub
 
-' Toma la foto de "así deben estar los botones". Se corre UNA VEZ, cuando el
-' panel de botones esté acomodado como quieres que quede para siempre.
+' Toma la foto de "asï¿½ deben estar los botones". Se corre UNA VEZ, cuando el
+' panel de botones estï¿½ acomodado como quieres que quede para siempre.
 Public Sub GuardarPosicionesBotones()
     Dim ws As Worksheet, meta As Worksheet, sh As Shape
     Dim r As Long, n As Long
 
     Set ws = HojaCotizacion()
     If ws Is Nothing Then
-        MsgBox "No se encontró la hoja de Cotización.", vbCritical
+        MsgBox "No se encontrï¿½ la hoja de Cotizaciï¿½n.", vbCritical
         Exit Sub
     End If
     Set meta = HojaMeta()
@@ -120,15 +121,15 @@ Public Sub GuardarPosicionesBotones()
         End If
     Next sh
 
-    MsgBox n & " objeto(s) registrados en su posición actual." & vbCrLf & vbCrLf & _
-           "De aquí en adelante «Reacomodar botones» los devolverá exactamente a " & _
+    MsgBox n & " objeto(s) registrados en su posiciï¿½n actual." & vbCrLf & vbCrLf & _
+           "De aquï¿½ en adelante ï¿½Reacomodar botonesï¿½ los devolverï¿½ exactamente a " & _
            "este lugar, y quedan anclados para que insertar o borrar filas ya no " & _
            "los arrastre.", vbInformation
 End Sub
 
-' Devuelve cada objeto registrado a su posición/tamaño de la foto.
+' Devuelve cada objeto registrado a su posiciï¿½n/tamaï¿½o de la foto.
 ' silencioso = True  -> sin mensajes (se llama desde los eventos).
-' silencioso = False -> reporta qué reacomodó (botón "Reacomodar botones").
+' silencioso = False -> reporta quï¿½ reacomodï¿½ (botï¿½n "Reacomodar botones").
 Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = True)
     Dim ws As Worksheet, meta As Worksheet, sh As Shape
     Dim reg As Object
@@ -150,14 +151,14 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
 
     If reg.Count = 0 Then
         If Not silencioso Then
-            MsgBox "Todavía no hay posiciones registradas." & vbCrLf & _
-                   "Acomoda los botones a mano una última vez y corre " & _
-                   "«GuardarPosicionesBotones».", vbExclamation
+            MsgBox "Todavï¿½a no hay posiciones registradas." & vbCrLf & _
+                   "Acomoda los botones a mano una ï¿½ltima vez y corre " & _
+                   "ï¿½GuardarPosicionesBotonesï¿½.", vbExclamation
         End If
         Exit Sub
     End If
 
-    ' --- Primera pasada: ¿de verdad hay algo que mover? ---
+    ' --- Primera pasada: ï¿½de verdad hay algo que mover? ---
     On Error Resume Next
     For Each sh In ws.Shapes
         If reg.Exists(sh.Name) Then
@@ -180,9 +181,9 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
     If movidos = 0 Then
         BloquearBotones ws
         If Not silencioso Then
-            MsgBox "Los botones están en su lugar." & _
+            MsgBox "Los botones estï¿½n en su lugar." & _
                    IIf(huerfanos > 0, vbCrLf & vbCrLf & huerfanos & " objeto(s) sin " & _
-                   "registrar (posibles duplicados). Usa «LimpiarBotonesDuplicados» " & _
+                   "registrar (posibles duplicados). Usa ï¿½LimpiarBotonesDuplicadosï¿½ " & _
                    "para revisarlos.", ""), vbInformation
         End If
         Exit Sub
@@ -211,15 +212,15 @@ Public Sub RestaurarPosicionesBotones(Optional ByVal silencioso As Boolean = Tru
     Application.ScreenUpdating = pantalla
 
     If Not silencioso Then
-        MsgBox movidos & " objeto(s) devueltos a su posición registrada." & _
+        MsgBox movidos & " objeto(s) devueltos a su posiciï¿½n registrada." & _
                IIf(huerfanos > 0, vbCrLf & vbCrLf & huerfanos & " objeto(s) sin " & _
-               "registrar (posibles duplicados). Usa «LimpiarBotonesDuplicados».", ""), _
+               "registrar (posibles duplicados). Usa ï¿½LimpiarBotonesDuplicadosï¿½.", ""), _
                vbInformation
     End If
 End Sub
 
-' Encuentra los objetos que NO están en el registro: normalmente son los clones
-' que generó un Rows(x).Copy + Insert. Pregunta antes de borrar nada.
+' Encuentra los objetos que NO estï¿½n en el registro: normalmente son los clones
+' que generï¿½ un Rows(x).Copy + Insert. Pregunta antes de borrar nada.
 Public Sub LimpiarBotonesDuplicados()
     Dim ws As Worksheet, meta As Worksheet, sh As Shape
     Dim reg As Object, lista As String
@@ -237,8 +238,8 @@ Public Sub LimpiarBotonesDuplicados()
         r = r + 1
     Loop
     If reg.Count = 0 Then
-        MsgBox "No hay registro de botones todavía. Corre primero " & _
-               "«GuardarPosicionesBotones».", vbExclamation
+        MsgBox "No hay registro de botones todavï¿½a. Corre primero " & _
+               "ï¿½GuardarPosicionesBotonesï¿½.", vbExclamation
         Exit Sub
     End If
 
@@ -252,13 +253,13 @@ Public Sub LimpiarBotonesDuplicados()
     Next sh
 
     If n = 0 Then
-        MsgBox "No hay objetos duplicados o de más en la hoja.", vbInformation
+        MsgBox "No hay objetos duplicados o de mï¿½s en la hoja.", vbInformation
         Exit Sub
     End If
 
-    If MsgBox("Se encontraron " & n & " objeto(s) que no están en el registro:" & _
-              vbCrLf & lista & vbCrLf & vbCrLf & "¿Eliminarlos?", _
-              vbYesNo + vbExclamation, "Objetos de más") <> vbYes Then Exit Sub
+    If MsgBox("Se encontraron " & n & " objeto(s) que no estï¿½n en el registro:" & _
+              vbCrLf & lista & vbCrLf & vbCrLf & "ï¿½Eliminarlos?", _
+              vbYesNo + vbExclamation, "Objetos de mï¿½s") <> vbYes Then Exit Sub
 
     Application.ScreenUpdating = False
     DesbloquearBotones ws
@@ -276,7 +277,7 @@ Public Sub LimpiarBotonesDuplicados()
 End Sub
 
 ' Bloquea SOLO los objetos de dibujo: el usuario ya no puede arrastrar, cambiar
-' de tamaño ni borrar los botones, pero las celdas siguen 100% editables
+' de tamaï¿½o ni borrar los botones, pero las celdas siguen 100% editables
 ' (Contents:=False) y las macros de insertar/borrar filas siguen funcionando.
 Public Sub BloquearBotones(Optional ByVal ws As Worksheet)
     If ws Is Nothing Then Set ws = HojaCotizacion()
@@ -299,12 +300,12 @@ End Sub
 
 
 ' ============================================================
-'  3) ESTRUCTURA DEL LIBRO (no más hojas de cotización)
+'  3) ESTRUCTURA DEL LIBRO (no mï¿½s hojas de cotizaciï¿½n)
 ' ============================================================
 
 ' Con la estructura protegida, Excel deshabilita: Insertar hoja, Eliminar hoja,
 ' Mover o copiar hoja, Cambiar nombre, Ocultar/Mostrar hoja. Es la forma NATIVA
-' y la más difícil de saltarse.
+' y la mï¿½s difï¿½cil de saltarse.
 Public Sub ProtegerEstructura()
     On Error Resume Next
     If ThisWorkbook.ProtectStructure Then Exit Sub
@@ -331,20 +332,20 @@ Public Sub BlindarLibro()
 
     Set ws = HojaCotizacion()
     If ws Is Nothing Then
-        MsgBox "No se encontró la hoja de Cotización.", vbCritical
+        MsgBox "No se encontrï¿½ la hoja de Cotizaciï¿½n.", vbCritical
         Exit Sub
     End If
 
     Application.ScreenUpdating = False
     FijarBotones ws                  ' 1) anclar todo
     GuardarPosicionesBotones         ' 2) foto de referencia (ya avisa por su cuenta)
-    AsegurarUUIDCotizacion           ' 3) ID Cotización en su lugar
+    AsegurarUUIDCotizacion           ' 3) ID Cotizaciï¿½n en su lugar
     ProtegerEstructura               ' 4) sin hojas nuevas
     Application.ScreenUpdating = True
 
     MsgBox "Libro blindado:" & vbCrLf & _
-           "  - Botones anclados, bloqueados y con posición registrada." & vbCrLf & _
-           "  - ID Cotización vigilado (se repone si lo borran)." & vbCrLf & _
+           "  - Botones anclados, bloqueados y con posiciï¿½n registrada." & vbCrLf & _
+           "  - ID Cotizaciï¿½n vigilado (se repone si lo borran)." & vbCrLf & _
            "  - Estructura protegida: no se pueden crear ni copiar hojas." & vbCrLf & vbCrLf & _
            "Guarda el archivo como .xlsm.", vbInformation
 End Sub
@@ -355,15 +356,15 @@ Public Sub DesblindarLibro()
     DesprotegerEstructura
     MsgBox "Blindaje retirado (botones y hojas se pueden mover a mano)." & vbCrLf & _
            "Al cerrar y volver a abrir el libro se aplica solo otra vez." & vbCrLf & _
-           "Si moviste botones a propósito, corre «GuardarPosicionesBotones».", vbInformation
+           "Si moviste botones a propï¿½sito, corre ï¿½GuardarPosicionesBotonesï¿½.", vbInformation
 End Sub
 
 
 ' ============================================================
-'  4) GUARDIÁN DE FILA ACTIVA (VALIDACIÓN DE CONTEXTO)
+'  4) GUARDIï¿½N DE FILA ACTIVA (VALIDACIï¿½N DE CONTEXTO)
 ' ============================================================
 
-' Verifica que la fila pertenezca estrictamente al área de conceptos
+' Verifica que la fila pertenezca estrictamente al ï¿½rea de conceptos
 ' (entre FILA_INICIO y antes de los totales finales SUBTOTAL / IVA / TOTAL).
 ' Evita que un usuario inserte o borre filas en el encabezado o en los totales.
 Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAviso As Boolean = True) As Boolean
@@ -371,14 +372,14 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
     Set ws = HojaCotizacion()
 
     If ws Is Nothing Then
-        If mostrarAviso Then MsgBox "No se encontró la hoja de Cotización.", vbCritical, "Hoja no encontrada"
+        If mostrarAviso Then MsgBox "No se encontrï¿½ la hoja de Cotizaciï¿½n.", vbCritical, "Hoja no encontrada"
         Exit Function
     End If
 
-    ' 1) Verificar que la hoja activa sea la de cotización
+    ' 1) Verificar que la hoja activa sea la de cotizaciï¿½n
     If UCase$(Trim$(ActiveSheet.Name)) <> UCase$(Trim$(ws.Name)) Then
         If mostrarAviso Then
-            MsgBox "Esta operación solo se puede realizar en la hoja de Cotización.", vbExclamation, "Hoja no válida"
+            MsgBox "Esta operaciï¿½n solo se puede realizar en la hoja de Cotizaciï¿½n.", vbExclamation, "Hoja no vï¿½lida"
         End If
         Exit Function
     End If
@@ -387,13 +388,13 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
     If fila < FILA_INICIO Then
         If mostrarAviso Then
             MsgBox "Por favor, selecciona una fila dentro de la tabla de conceptos para insertar o borrar." & vbCrLf & vbCrLf & _
-                   "(Las filas superiores corresponden a datos generales del proyecto y no deben modificarse con este botón).", _
-                   vbExclamation, "Ubicación fuera de la tabla"
+                   "(Las filas superiores corresponden a datos generales del proyecto y no deben modificarse con este botï¿½n).", _
+                   vbExclamation, "Ubicaciï¿½n fuera de la tabla"
         End If
         Exit Function
     End If
 
-    ' 3) Encontrar dónde empiezan los totales finales (SUBTOTAL en columna I o A)
+    ' 3) Encontrar dï¿½nde empiezan los totales finales (SUBTOTAL en columna I o A)
     Dim ultimaFila As Long, r As Long, filaFinTotales As Long
     ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If ws.Cells(ws.Rows.Count, "I").End(xlUp).Row > ultimaFila Then
@@ -409,12 +410,12 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
         End If
     Next r
 
-    ' 4) Si la fila seleccionada está en los totales finales o más abajo, bloquear
+    ' 4) Si la fila seleccionada estï¿½ en los totales finales o mï¿½s abajo, bloquear
     If fila >= filaFinTotales Then
         If mostrarAviso Then
             MsgBox "Por favor, selecciona una fila dentro de la tabla de conceptos para insertar o borrar." & vbCrLf & vbCrLf & _
-                   "(No se pueden insertar ni borrar filas en el área de totales finales de la cotización).", _
-                   vbExclamation, "Ubicación fuera de la tabla"
+                   "(No se pueden insertar ni borrar filas en el ï¿½rea de totales finales de la cotizaciï¿½n).", _
+                   vbExclamation, "Ubicaciï¿½n fuera de la tabla"
         End If
         Exit Function
     End If
@@ -422,7 +423,7 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
     ValidarFilaEnBloque = True
 End Function
 
-' Indica si la fila es ESTRUCTURAL (SUMA TOTAL, título de categoría combinado
+' Indica si la fila es ESTRUCTURAL (SUMA TOTAL, tï¿½tulo de categorï¿½a combinado
 ' o encabezado de columnas). Esas filas no se copian ni se borran con los
 ' botones de fila, porque duplicarlas descuadra los totales.
 ' 2026-11-09: compara por coincidencia exacta / prefijo. Antes bastaba con que
@@ -441,23 +442,23 @@ End Function
 
 
 ' ============================================================
-'  5) RÓTULOS NORMALIZADOS (compartidos por suma, limpiar, etc.)
+'  5) Rï¿½TULOS NORMALIZADOS (compartidos por suma, limpiar, etc.)
 ' ============================================================
 
-' Mayúsculas, sin acentos, sin espacios, sin ":" ni ".". Tolera errores de
-' celda (#N/A, #¡VALOR!) devolviendo "".
+' Mayï¿½sculas, sin acentos, sin espacios, sin ":" ni ".". Tolera errores de
+' celda (#N/A, #ï¿½VALOR!) devolviendo "".
 Public Function NormalizarRotulo(ByVal v As Variant) As String
     Dim t As String
     If IsError(v) Then Exit Function
     t = UCase$(Trim$(CStr(v)))
-    t = Replace(t, "Á", "A"): t = Replace(t, "É", "E"): t = Replace(t, "Í", "I")
-    t = Replace(t, "Ó", "O"): t = Replace(t, "Ú", "U"): t = Replace(t, "Ü", "U")
+    t = Replace(t, "ï¿½", "A"): t = Replace(t, "ï¿½", "E"): t = Replace(t, "ï¿½", "I")
+    t = Replace(t, "ï¿½", "O"): t = Replace(t, "ï¿½", "U"): t = Replace(t, "ï¿½", "U")
     t = Replace(t, " ", ""): t = Replace(t, ":", ""): t = Replace(t, ".", "")
     t = Replace(t, Chr$(160), "")   ' espacio duro (pegado desde web/Word)
     NormalizarRotulo = t
 End Function
 
-' Clasifica un rótulo de la columna I: "SUBTOTAL", "IVA", "TOTAL" o "".
+' Clasifica un rï¿½tulo de la columna I: "SUBTOTAL", "IVA", "TOTAL" o "".
 ' Usa PREFIJO para tolerar "IVA (16%)" o "TOTAL MXN", pero ya no detecta
 ' "IVA" a media palabra.
 Public Function EtiquetaTotal(ByVal v As Variant) As String
@@ -477,8 +478,8 @@ End Function
 '  6) REGISTRO DE ERRORES (para los eventos con manejo silencioso)
 ' ============================================================
 
-' Anota el error en Meta!J:M (fecha, origen, número, descripción) sin
-' interrumpir al usuario. Conserva los últimos 200 registros.
+' Anota el error en Meta!J:M (fecha, origen, nï¿½mero, descripciï¿½n) sin
+' interrumpir al usuario. Conserva los ï¿½ltimos 200 registros.
 Public Sub RegistrarError(ByVal origen As String, ByVal numero As Long, ByVal descripcion As String)
     Const COL_LOG As Long = 10      ' J
     Const MAX_LOG As Long = 200

@@ -3,6 +3,7 @@
 ## Plantilla de Cotizaciones — Azteca Estudios
 
 **Fecha:** 2026-11-09
+**Autor:** Fernando Dorantes Nieto
 **Estado:** Propuesta, pendiente de validar con el cliente
 **Alcance:** Firma digital del proyecto VBA de `Plantilla Cotización AE.xlsm`. En un anexo se incluye una segunda propuesta pendiente: totales con fórmulas nativas.
 

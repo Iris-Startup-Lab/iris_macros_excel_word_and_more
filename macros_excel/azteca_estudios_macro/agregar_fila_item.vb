@@ -1,5 +1,6 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
 ' Modificado con validación de contexto de fila y recálculo automático
 ' 2026-11-09: rechaza filas estructurales (SUMA, títulos, encabezados) para no
 '             duplicar una SUMA TOTAL y descuadrar los totales.

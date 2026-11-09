@@ -1,5 +1,6 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
 ' Modificado con validación de contexto de fila y recálculo automático
 ' 2026-11-09: busca la fila "SUMA TOTAL" por coincidencia exacta (antes cualquier
 '             concepto que contuviera "SUMA" se tomaba como fin de bloque), opera
