@@ -88,7 +88,13 @@ Public Sub AsegurarUUIDCotizacion()
 
     proyecto = Trim$(CStr(ws.Range("C4").Value))
     ' Sin nombre de proyecto todavía no generamos nada (evita UUIDs "huérfanos").
-    If Len(proyecto) = 0 Then Exit Sub
+    ' Tampoco se permite un ID escrito a mano: sin proyecto no hay identidad,
+    ' así que K4 debe quedar vacío (antes se conservaba el texto inventado y
+    ' terminaba en el nombre de los PDFs).
+    If Len(proyecto) = 0 Then
+        If Len(CStr(ws.Range("K4").Value)) > 0 Then ws.Range("K4").ClearContents
+        Exit Sub
+    End If
 
     Set meta = HojaMeta()
     proyGuardado = Trim$(CStr(meta.Range("B1").Value))

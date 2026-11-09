@@ -417,3 +417,18 @@ Public Function ValidarFilaEnBloque(ByVal fila As Long, Optional ByVal mostrarAv
     ValidarFilaEnBloque = True
 End Function
 
+' Indica si la fila es ESTRUCTURAL (SUMA TOTAL, título de categoría combinado
+' o encabezado de columnas). Esas filas no se copian ni se borran con los
+' botones de fila, porque duplicarlas descuadra los totales.
+Public Function EsFilaEstructural(ByVal ws As Worksheet, ByVal fila As Long) As Boolean
+    Dim textoNorm As String
+    textoNorm = Replace(Replace(UCase$(Trim$(CStr(ws.Cells(fila, "A").Value))), ":", ""), " ", "")
+
+    If InStr(1, textoNorm, "SUMA") > 0 Then EsFilaEstructural = True: Exit Function
+    If ws.Cells(fila, "A").MergeArea.Columns.Count > 1 Then EsFilaEstructural = True: Exit Function
+    If InStr(textoNorm, "DESCRIP") > 0 Or InStr(textoNorm, "PRECIO") > 0 Or _
+       InStr(textoNorm, "CANTIDAD") > 0 Or InStr(textoNorm, "ITEM") > 0 Then
+        EsFilaEstructural = True
+    End If
+End Function
+

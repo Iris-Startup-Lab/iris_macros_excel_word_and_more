@@ -17,7 +17,7 @@ Attribute VB_Name = "M_PDF"
 Option Explicit
 
 Public Function VersionMPDF() As String
-    VersionMPDF = "2026-11-07-ABRE-DETALLE-FIX"
+    VersionMPDF = "2026-11-09-NOMBRE-SEGURO-FIX"
 End Function
 
 Public Sub GenerarPDFsCotizacion()
@@ -68,22 +68,34 @@ Public Sub GenerarPDFsCotizacion()
     proyecto = LimpiarNombre(CStr(ws.Range("C4").Value))
     uuid = Trim$(CStr(ws.Range("K4").Value))
     version = LimpiarNombre(CStr(ws.Range("N4").Value))
-    On Error Resume Next
-    fechaCot = Format(ws.Range("K3").Value, "dd-mm-yyyy")
-    On Error GoTo 0
+    ' La fecha puede venir como texto ("10/05/2026"): se higieniza igual que el
+    ' resto para que una "/" no rompa la ruta del archivo.
+    If IsDate(ws.Range("K3").Value) Then
+        fechaCot = Format(CDate(ws.Range("K3").Value), "dd-mm-yyyy")
+    Else
+        fechaCot = LimpiarNombre(CStr(ws.Range("K3").Value))
+    End If
 
-    If Len(uuid) = 0 Then
+    ' Sin proyecto no hay identidad: se valida C4, no K4 (K4 podría traer texto
+    ' escrito a mano). Y el ID debe ser exactamente el guardado en Meta.
+    If Len(proyecto) = 0 Then
         MsgBox "Falta el nombre del proyecto (C4) para poder asignar el ID/UUID.", vbExclamation, "Datos incompletos"
+        Exit Sub
+    End If
+    If Len(uuid) = 0 Or StrComp(uuid, UUIDGuardado(), vbTextCompare) <> 0 Then
+        MsgBox "El ID Cotización (K4) no coincide con el registrado para este proyecto." & vbCrLf & _
+               "No se generaron los PDFs. Vuelve a escribir el nombre del proyecto en C4.", _
+               vbExclamation, "ID Cotización inválido"
         Exit Sub
     End If
 
     ruta = ThisWorkbook.Path & "\"
-    baseNombre = "Cotizacion_" & cliente & "_" & proyecto & "_" & uuid
-    If Len(version) > 0 Then baseNombre = baseNombre & "_v" & version
-    If Len(fechaCot) > 0 Then baseNombre = baseNombre & "_" & fechaCot
+    AjustarLargoNombre ruta, cliente, proyecto, uuid, version, fechaCot
+    baseNombre = ArmarBaseNombre(cliente, proyecto, uuid, version, fechaCot)
 
     Dim ultima As Long
     ultima = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    If ultima < FILA_INICIO Then ultima = FILA_INICIO
 
     ' Guardamos el estado de colapso ACTUAL del usuario (lo que dejó oculto a
     ' mano o con los botones), para que el RESUMEN lo respete tal cual.
@@ -93,6 +105,9 @@ Public Sub GenerarPDFsCotizacion()
         estado(i) = ws.Rows(i).EntireRow.Hidden
     Next i
 
+    ' A partir de aquí la hoja se altera (filas ocultas, resalto): cualquier
+    ' error inesperado debe regresarla al estado del usuario.
+    On Error GoTo ErrorInesperado
     Application.ScreenUpdating = False
     QuitarResaltoDetalle          ' PDFs limpios: sin el rojizo de trabajo
 
@@ -111,6 +126,7 @@ Public Sub GenerarPDFsCotizacion()
     End If
 
     ' La hoja queda en el estado del usuario; devolvemos el rojizo de trabajo.
+    On Error GoTo 0
     ResaltarDetalle
     Application.ScreenUpdating = True
 
@@ -129,8 +145,15 @@ Public Sub GenerarPDFsCotizacion()
     On Error GoTo 0
     Exit Sub
 
+ErrorInesperado:
+    MsgBox "Ocurrió un error inesperado al preparar los PDFs (" & Err.Number & "):" & vbCrLf & _
+           Err.Description & vbCrLf & vbCrLf & "La hoja se regresó a como estaba.", _
+           vbCritical, "Error al generar PDFs"
+    Resume FinalizarConError
+
 FinalizarConError:
     ' Restaurar estado de filas y resalto si ocurrió un error durante la exportación
+    On Error Resume Next
     For i = FILA_INICIO To ultima
         ws.Rows(i).EntireRow.Hidden = estado(i)
     Next i
@@ -164,10 +187,13 @@ Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As 
 
     If numError <> 0 Then
         If numError = 1004 Then
-            MsgBox "No se pudo generar el archivo PDF porque ya se encuentra abierto en otro programa " & _
-                   "(como Adobe Acrobat o su navegador web):" & vbCrLf & vbCrLf & _
+            MsgBox "No se pudo generar el archivo PDF:" & vbCrLf & vbCrLf & _
                    "  " & archivo & vbCrLf & vbCrLf & _
-                   "Por favor ciérralo y vuelve a presionar el botón.", vbCritical, "Archivo PDF abierto o bloqueado"
+                   "Causas más comunes:" & vbCrLf & _
+                   "  • El PDF ya está abierto (Acrobat, Edge, navegador). Ciérralo." & vbCrLf & _
+                   "  • La carpeta es de solo lectura o está sincronizándose (OneDrive)." & vbCrLf & _
+                   "  • No hay una impresora predeterminada configurada en Windows." & vbCrLf & vbCrLf & _
+                   "Corrige y vuelve a presionar el botón.", vbCritical, "No se pudo exportar el PDF"
         Else
             MsgBox "Ocurrió un error inesperado al generar el PDF (" & numError & "):" & vbCrLf & _
                    descError & vbCrLf & vbCrLf & "Archivo: " & archivo, vbCritical, "Error al exportar PDF"
@@ -177,6 +203,42 @@ Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As 
     End If
     ExportarPDF = True
 End Function
+
+Private Function ArmarBaseNombre(ByVal cliente As String, ByVal proyecto As String, _
+                                 ByVal uuid As String, ByVal version As String, _
+                                 ByVal fechaCot As String) As String
+    Dim s As String
+    s = "Cotizacion_" & cliente & "_" & proyecto & "_" & uuid
+    If Len(version) > 0 Then s = s & "_v" & version
+    If Len(fechaCot) > 0 Then s = s & "_" & fechaCot
+    ArmarBaseNombre = s
+End Function
+
+' ExportAsFixedFormat falla (1004) con rutas de más de ~218 caracteres. Si la
+' ruta completa se pasa, se recortan cliente y proyecto (nunca el UUID).
+Private Sub AjustarLargoNombre(ByVal ruta As String, ByRef cliente As String, _
+                               ByRef proyecto As String, ByVal uuid As String, _
+                               ByVal version As String, ByVal fechaCot As String)
+    Const LARGO_MAX As Long = 218
+    Dim exceso As Long, recorte As Long
+
+    exceso = Len(ruta & ArmarBaseNombre(cliente, proyecto, uuid, version, fechaCot) & "_Resumen.pdf") - LARGO_MAX
+    If exceso <= 0 Then Exit Sub
+
+    ' Primero se recorta el proyecto (dejando al menos 10 caracteres)...
+    recorte = exceso
+    If recorte > Len(proyecto) - 10 Then recorte = Len(proyecto) - 10
+    If recorte > 0 Then
+        proyecto = Trim$(Left$(proyecto, Len(proyecto) - recorte))
+        exceso = exceso - recorte
+    End If
+    ' ...y luego el cliente, si todavía hace falta.
+    If exceso > 0 Then
+        recorte = exceso
+        If recorte > Len(cliente) - 5 Then recorte = Len(cliente) - 5
+        If recorte > 0 Then cliente = Trim$(Left$(cliente, Len(cliente) - recorte))
+    End If
+End Sub
 
 Private Function LimpiarNombre(ByVal s As String) As String
     Dim r As String

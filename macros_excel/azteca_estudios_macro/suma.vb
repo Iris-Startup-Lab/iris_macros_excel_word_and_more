@@ -1,8 +1,12 @@
 ' Autores: Azeneth Guadalupe Garcia Mendez
 ' Javier Flores Martinez
+' Fernando Dorantes Nieto
 ' Modificado para mayor tolerancia y robustez
+' 2026-11-09: trabaja SIEMPRE sobre la hoja Cotización (antes usaba la hoja
+'             activa y podía escribir totales en otra hoja).
 Sub suma()
 
+    Dim ws As Worksheet
     Dim i As Long
     Dim j As Long
     Dim inicioBloque As Long
@@ -16,12 +20,15 @@ Sub suma()
     Dim textoCelda As String
     Dim x As Long
 
-    ultimaFila = Cells(Rows.Count, "A").End(xlUp).Row
+    Set ws = HojaCotizacion()
+    If ws Is Nothing Then Exit Sub
+
+    ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     subtotalGeneral = 0
 
     For i = 1 To ultimaFila
 
-        texto = Trim(CStr(Cells(i, "A").Value))
+        texto = Trim(CStr(ws.Cells(i, "A").Value))
         textoNorm = Replace(Replace(UCase(texto), ":", ""), " ", "")
 
         If textoNorm = "SUMATOTAL" Then
@@ -30,7 +37,7 @@ Sub suma()
             inicioBloque = 1
 
             For j = i - 1 To 1 Step -1
-                If InStr(1, UCase(Cells(j, "A").Value), "SUMA") > 0 Then
+                If InStr(1, UCase(ws.Cells(j, "A").Value), "SUMA") > 0 Then
                     inicioBloque = j + 1
                     Exit For
                 End If
@@ -38,35 +45,35 @@ Sub suma()
 
             For j = inicioBloque To i - 1
 
-                If InStr(1, UCase(Cells(j, "A").Value), "DESCRIP") > 0 Then GoTo Continuar
-                If InStr(1, UCase(Cells(j, "A").Value), "PRECIO") > 0 Then GoTo Continuar
+                If InStr(1, UCase(ws.Cells(j, "A").Value), "DESCRIP") > 0 Then GoTo Continuar
+                If InStr(1, UCase(ws.Cells(j, "A").Value), "PRECIO") > 0 Then GoTo Continuar
 
-                If IsNumeric(Cells(j, "M").Value) Then
-                    If Len(Trim(Cells(j, "A").Value)) > 0 Then
-                        totalBloque = totalBloque + CDbl(Cells(j, "M").Value)
+                If IsNumeric(ws.Cells(j, "M").Value) Then
+                    If Len(Trim(ws.Cells(j, "A").Value)) > 0 Then
+                        totalBloque = totalBloque + CDbl(ws.Cells(j, "M").Value)
                     End If
                 End If
 
 Continuar:
             Next j
 
-            Cells(i, "M").Value = totalBloque
+            ws.Cells(i, "M").Value = totalBloque
             subtotalGeneral = subtotalGeneral + totalBloque
 
         End If
 
     Next i
 
-    For Each celdaTexto In Range("I1:I" & ultimaFila)
+    For Each celdaTexto In ws.Range("I1:I" & ultimaFila)
 
         textoCelda = Replace(Replace(UCase(Trim(CStr(celdaTexto.Value))), ".", ""), " ", "")
 
         If InStr(textoCelda, "SUBTOTAL") > 0 Then
-            Cells(celdaTexto.Row, "K").Value = subtotalGeneral
+            ws.Cells(celdaTexto.Row, "K").Value = subtotalGeneral
         End If
 
         If InStr(textoCelda, "IVA") > 0 Then
-            Cells(celdaTexto.Row, "K").Value = Round(subtotalGeneral * 0.16, 2)
+            ws.Cells(celdaTexto.Row, "K").Value = Round(subtotalGeneral * 0.16, 2)
         End If
 
         If InStr(textoCelda, "TOTAL") > 0 And InStr(textoCelda, "SUBTOTAL") = 0 Then
@@ -74,13 +81,13 @@ Continuar:
             valorIVA = 0
 
             For x = celdaTexto.Row - 1 To 1 Step -1
-                If InStr(Replace(Replace(UCase(CStr(Cells(x, "I").Value)), ".", ""), " ", ""), "IVA") > 0 Then
-                    valorIVA = CDbl(Cells(x, "K").Value)
+                If InStr(Replace(Replace(UCase(CStr(ws.Cells(x, "I").Value)), ".", ""), " ", ""), "IVA") > 0 Then
+                    valorIVA = CDbl(ws.Cells(x, "K").Value)
                     Exit For
                 End If
             Next x
 
-            Cells(celdaTexto.Row, "K").Value = subtotalGeneral + valorIVA
+            ws.Cells(celdaTexto.Row, "K").Value = subtotalGeneral + valorIVA
 
         End If
 

@@ -1,5 +1,37 @@
 # Registro de Tareas y Cambios — Azteca Estudios Macro
 
+## [2026-11-09] Corrección — Bug 1: ID Cotización escrito a mano sin proyecto
+
+- **Problema:** con `C4` vacío, un texto escrito en `K4` se conservaba y los PDFs se generaban con ese ID inventado.
+- **Corrección:** `AsegurarUUIDCotizacion` vacía `K4` si no hay proyecto. `GenerarPDFsCotizacion` valida `C4` y exige que `K4` sea igual a `Meta!B2`.
+- **Archivos:** `asignar_uuid_cotizacion.vb`, `bas/asignar_uuid_cotizacion.bas`, `generar_pdfs_resumen_detalle.vb`, `bas/generar_pdfs_resumen_detalle.bas`.
+
+## [2026-11-09] Corrección — Bug 3: LimpiarCotizacion y celdas combinadas
+
+- **Problema:** `ClearContents` sobre `B:L` en títulos combinados `A:N` lanzaba error 1004; además, si no encontraba la hoja, limpiaba `ActiveSheet`.
+- **Corrección:** se omiten filas estructurales (`EsFilaEstructural`), las combinaciones solo se limpian si caen completas dentro de `B:L`, se quitó el respaldo a `ActiveSheet` y se agregó manejo de errores que restaura `ScreenUpdating`.
+- **Archivos:** `limpiar_cotizacion.vb` (módulo legacy, se pega a mano).
+
+## [2026-11-09] Corrección — Bug 4: AgregarFilaItem duplicaba filas de SUMA/títulos
+
+- **Problema:** con el cursor en `SUMA TOTAL`, un título o un encabezado, la fila se copiaba y descuadraba los totales.
+- **Corrección:** nueva función pública `EsFilaEstructural(ws, fila)` en `M_Blindaje`; `AgregarFilaItem` la usa y rechaza esas filas. Las operaciones de fila ahora apuntan a la hoja Cotización explícitamente.
+- **Archivos:** `blindaje_botones.vb`, `bas/blindaje_botones.bas`, `agregar_fila_item.vb` (legacy).
+
+## [2026-11-09] Corrección — Bug 5: suma() escribía en la hoja activa
+
+- **Problema:** `Cells`/`Range` sin calificar; si la hoja activa era otra, los totales se escribían ahí.
+- **Corrección:** `suma` usa `HojaCotizacion()` en todas las referencias.
+- **Archivos:** `suma.vb` (legacy, Módulo9).
+
+## [2026-11-09] Corrección — Bug 7: robustez del nombre y errores de PDF
+
+- **Problema:** fecha en texto con `/` rompía la ruta; rutas >218 caracteres daban 1004 con un mensaje engañoso; errores fuera de `ExportarPDF` dejaban filas ocultas y pantalla congelada.
+- **Corrección:** fecha higienizada, recorte automático de cliente/proyecto (nunca el UUID) para no rebasar 218 caracteres, mensaje 1004 con causas reales y manejador `ErrorInesperado` que restaura la hoja.
+- **Versión:** `VersionMPDF = 2026-11-09-NOMBRE-SEGURO-FIX`.
+- **Archivos:** `generar_pdfs_resumen_detalle.vb`, `bas/generar_pdfs_resumen_detalle.bas`.
+- **Pendiente:** bugs 2, 6, 8, 9 y 10 de la evaluación; probar en Excel.
+
 ## [2026-11-09] Cierre — Documentación, nombre final y limpieza para Git
 
 - **README:** se agregó `Diana Berumen Estrada` en Autores y una sección de versión actual con módulos, botones y versiones.
