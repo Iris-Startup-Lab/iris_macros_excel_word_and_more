@@ -18,6 +18,19 @@ Este documento proporciona contexto técnico, arquitectura, convenciones y regla
 5. **Manipulación Dinámica de Estructura:** Inserción y eliminación de filas, adición de fechas/ítems y duplicación de bloques de categorías desde la hoja `Plantillas`.
 6. **Blindaje Operativo (`M_Blindaje`):** Anclaje, registro y bloqueo de los botones de la hoja; reimpresión automática del ID Cotización si se borra; y protección de la estructura del libro para impedir la creación o copia de hojas de cotización.
 
+### Estado actual — 2026-11-09
+
+- Archivo funcional de distribución: `Plantilla Cotización AE.xlsm` (fuera de Git).
+- Módulos actuales:
+  - `M_UUID`, `M_GeneradorUUID`, `M_Esquema`, `M_PDF`, `M_Blindaje`.
+  - `M_BasePlantilla` (hoja `_BaseAE`, Nueva cotización, comentarios del encabezado).
+  - `M_Producto` (productos, formatos `G:M`, modelo de producto).
+  - `M_Catalogos` (foros/espacios y catálogos).
+  - `M_Recalculo` (recálculo automático).
+- Los módulos legacy `Módulo1` a `Módulo10` se conservan: algunos contienen `suma`, `AgregarFilaFecha`, `DuplicarBloque` y `BorrarFilaSeleccionada`.
+- Versiones para verificar: `VersionMProducto`, `VersionMCatalogos`, `VersionMPDF`, `VersionMBasePlantilla`.
+- El encabezado usa comentarios/notas para `C3`, `C4`, `K3`, `K4`; `H3`/`H4` usan mensajes de validación de listas.
+
 ---
 
 ## 2. Mapa y Estructura del Repositorio
@@ -149,7 +162,7 @@ Al modificar o crear código en este repositorio, **sigue estrictamente las sigu
 - Los archivos `.vb` en la raíz son la fuente principal de código legible en UTF-8 / Markdown.
 - Los archivos `.bas` en la carpeta `bas/` corresponden a los módulos estándar listos para importación en el editor VBA de Excel. **Formato obligatorio:** codificación **cp1252 (Windows-1252)**, saltos de línea **CRLF**, y primera línea `Attribute VB_Name = "<NombreDelMódulo>"`. Si se escriben en UTF-8, los acentos aparecen corruptos dentro del editor VBA.
 - **REGLA:** Si realizas un cambio en una macro modular (`asignar_uuid_cotizacion`, `esquema_categorias`, `generar_pdfs_resumen_detalle`, `macro_generadora_uuid`, `blindaje_botones`), **debes actualizar tanto el archivo `.vb` en la raíz como el correspondiente `.bas` dentro de `bas/`**.
-- Mapeo archivo → nombre de módulo: `asignar_uuid_cotizacion` → `M_UUID`, `esquema_categorias` → `M_Esquema`, `generar_pdfs_resumen_detalle` → `M_PDF`, `blindaje_botones` → `M_Blindaje`.
+- Mapeo archivo → nombre de módulo: `asignar_uuid_cotizacion` → `M_UUID`, `esquema_categorias` → `M_Esquema`, `generar_pdfs_resumen_detalle` → `M_PDF`, `blindaje_botones` → `M_Blindaje`, `base_plantilla` → `M_BasePlantilla`, `catalogo_categorias` → `M_Catalogos`, `producto_seguro` → `M_Producto`, `recalculo_automatico` → `M_Recalculo`.
 
 ### 2.bis Regla de Integridad Visual (obligatoria)
 

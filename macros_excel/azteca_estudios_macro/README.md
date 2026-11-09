@@ -5,6 +5,59 @@ Autores:
 - Fernando Dorantes Nieto
 - Azeneth Guadalupe García Méndez
 - Javier Flores Martinez
+- Diana Berumen Estrada
+
+## Versión actual — 2026-11-09
+
+- Archivo funcional de distribución: `Plantilla Cotización AE.xlsm` (fuera de Git).
+- Guía actualizada: `GUÍA DE USO COTIZACIÓN.pdf`.
+- Respaldos locales y PDFs generados: carpeta `Respaldos/` (ignorada por Git).
+
+### Módulos actuales
+
+| Archivo | Módulo | Función |
+|---|---|---|
+| `asignar_uuid_cotizacion.vb` | `M_UUID` | UUID en `K4`, hoja `Meta` y vigilancia del ID. |
+| `macro_generadora_uuid.vb` | `M_GeneradorUUID` | Generación del GUID mediante API de Windows. |
+| `esquema_categorias.vb` | `M_Esquema` | Agrupaciones, detalle, colapso y resaltado. |
+| `generar_pdfs_resumen_detalle.vb` | `M_PDF` | PDFs `_Detalle` y `_Resumen`; abre el Detalle al terminar. |
+| `blindaje_botones.vb` | `M_Blindaje` | Anclaje de botones, posiciones y protección. |
+| `base_plantilla.vb` | `M_BasePlantilla` | Hoja oculta `_BaseAE`, Nueva cotización y comentarios del encabezado. |
+| `producto_seguro.vb` | `M_Producto` | Inserción de productos y formatos `G:M`. |
+| `catalogo_categorias.vb` | `M_Catalogos` | Alta de foros/espacios y catálogos. |
+| `recalculo_automatico.vb` | `M_Recalculo` | Recálculo automático al editar conceptos. |
+
+### Botones actuales
+
+| Botón | Macro | Función |
+|---|---|---|
+| Agregar producto | `AgregarProducto` | Inserta producto debajo de la fila activa. |
+| Espacio para fechas | `AgregarFilaFecha` | Inserta una fila de fecha. |
+| Agregar bloque | `DuplicarBloque` | Inserta un bloque desde `Plantillas`. |
+| Sumar bloque | `suma` | Recalcula totales, IVA y total final. |
+| Borrar fila | `BorrarFilaSeleccionada` | Borra un concepto con confirmación. |
+| Generar PDFs | `GenerarPDFsCotizacion` | Genera Detalle y Resumen; abre el Detalle. |
+| Agregar espacio/foro | `AgregarEspacioForo` | Inserta foro y abre catálogo de Espacios. |
+| Reconstruir esquema | `ConstruirEsquema` | Crea agrupaciones de categorías y detalle. |
+| Marcar detalle | `MarcarComoDetalle` | Marca filas con `D` en columna `O`. |
+| Quitar marca detalle | `QuitarMarcaDetalle` | Limpia la marca `D`. |
+| Ocultar detalle | `OcultarDetalle` | Oculta filas marcadas `D`. |
+| Mostrar todo | `MostrarTodo` | Muestra todas las filas y niveles. |
+| Reestablecer macro | `ResetMacroDefault` | Quita agrupaciones y muestra todo. |
+| Nueva cotización | `RestaurarBasePlantilla` | Restaura desde `_BaseAE` y conserva el encabezado. |
+
+### Versiones para verificar
+
+```vba
+?VersionMProducto
+?VersionMCatalogos
+?VersionMPDF
+?VersionMBasePlantilla
+```
+
+Los módulos legacy `Módulo1` a `Módulo10` se conservan porque algunos contienen `suma`, `AgregarFilaFecha`, `DuplicarBloque` y `BorrarFilaSeleccionada`.
+
+---
 
 Este proyecto contiene macros en VBA orientadas a automatizar dos procesos clave:
 
@@ -66,9 +119,11 @@ y (c) generar **dos PDFs** (con y sin detalle) con un solo clic.
 ## Instalación (una sola vez)
 
 1. Abre el `.xlsm`, `Alt+F11` (editor VBA).
-2. `Archivo > Importar archivo...` e importa los 4 módulos:
-   `macro_generadora_uuid.vb`, `asignar_uuid_cotizacion.vb`,
-   `esquema_categorias.vb`, `generar_pdfs_resumen_detalle.vb`.
+2. `Archivo > Importar archivo...` e importa los módulos actuales desde `bas/`:
+   `macro_generadora_uuid.bas`, `asignar_uuid_cotizacion.bas`,
+   `esquema_categorias.bas`, `generar_pdfs_resumen_detalle.bas`,
+   `blindaje_botones.bas`, `M_BasePlantilla.bas`, `M_Producto.bas`,
+   `M_Catalogos.bas` y `M_Recalculo.bas`.
 3. Abre `eventos_uuid.vb` y copia **BLOQUE A** dentro de `ThisWorkbook` y
    **BLOQUE B** dentro del objeto de la hoja `Cotización` (doble clic en cada uno).
 4. Asigna macros a botones en la hoja (clic derecho en el botón > *Asignar macro*):

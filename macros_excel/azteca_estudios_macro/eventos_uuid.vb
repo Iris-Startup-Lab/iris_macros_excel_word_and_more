@@ -11,8 +11,9 @@
 '   2) El ID Cotización (K4) se repone si lo borran o lo editan a mano.
 '   3) No se pueden crear ni copiar hojas de cotización.
 '
-' Requiere los módulos: M_UUID (asignar_uuid_cotizacion) y
-'                       M_Blindaje (blindaje_botones).
+' Requiere los módulos: M_UUID (asignar_uuid_cotizacion),
+'                       M_Blindaje (blindaje_botones) y
+'                       M_Catalogos (catalogo_categorias).
 
 ' ============================================================
 '  BLOQUE A  ->  pegar dentro del objeto ThisWorkbook
@@ -83,14 +84,42 @@ End Sub
 Private Sub Worksheet_Change(ByVal Target As Range)
     ' (2) Vigila C4 (proyecto) y K4 (ID Cotización). Si borran o alteran K4, se
     ' reimprime el MISMO UUID guardado en la hoja Meta.
+    ' (4) Si se elige un foro por la flecha nativa, agrega también su descripción.
+    ' (6) Recalcula subtotales y totales al editar o vaciar celdas de productos.
     On Error Resume Next
     VigilarIDCotizacion Target
+    AjustarDescripcionForo Target
+    RecalcularTrasCambio Target
 End Sub
 
 Private Sub Worksheet_Activate()
     ' (1) Cada vez que se entra a la hoja se verifica el anclaje y la posición.
     ' No hace nada (ni marca el libro como modificado) si todo está en su sitio.
+    ' (3) También limpia cualquier combo temporal huérfano del catálogo.
     On Error Resume Next
+    LimpiarCatalogoTemporal
     FijarBotones Me
     RestaurarPosicionesBotones
+End Sub
+
+Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean)
+    ' (4) Catálogo de Foros: doble clic en una fila de foro abre el combo de Espacios.
+    ' Las categorías usan directamente la validación nativa de la celda A:N.
+    On Error Resume Next
+    If EsFilaForoEn(Target) Then
+        Cancel = True
+        AbrirCatalogoForoEn Target
+    End If
+End Sub
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    ' (3) Si el usuario se mueve fuera del encabezado, se cierra el catálogo temporal.
+    On Error Resume Next
+    LimpiarCatalogoSiCorresponde Target
+End Sub
+
+Private Sub Worksheet_Deactivate()
+    ' (3) Si cambia de hoja, se limpia cualquier catálogo temporal abierto.
+    On Error Resume Next
+    LimpiarCatalogoTemporal
 End Sub

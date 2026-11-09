@@ -9,6 +9,44 @@ Guía paso a paso para instalar y usar las macros de:
 > Escrito para que cualquier persona pueda instalarlo desde cero, sin conocer VBA.
 > Si algo falla, ve directo a la sección **9. Solución de problemas**.
 
+## Versión actual — 2026-11-09
+
+Archivo final de distribución:
+
+```text
+Plantilla Cotización AE.xlsm
+```
+
+Módulos que deben estar importados:
+
+- `M_UUID`
+- `M_GeneradorUUID`
+- `M_Esquema`
+- `M_PDF`
+- `M_Blindaje`
+- `M_BasePlantilla`
+- `M_Producto`
+- `M_Catalogos`
+- `M_Recalculo`
+
+Módulos legacy conservados: `Módulo1` a `Módulo10`. No eliminar: algunos contienen `suma`, `AgregarFilaFecha`, `DuplicarBloque` y `BorrarFilaSeleccionada`.
+
+Verificación rápida en la Ventana inmediata:
+
+```vba
+?VersionMProducto
+?VersionMCatalogos
+?VersionMPDF
+?VersionMBasePlantilla
+```
+
+Comportamiento actual del encabezado:
+
+- `H3` ID Cliente y `H4` ID Proyecto: mensaje amarillo al desplegar la lista.
+- `C3` Cliente, `C4` Proyecto, `K3` Fecha y `K4` ID Cotización: comentario con triángulo rojo; el cuadro amarillo aparece al pasar el mouse.
+
+La exportación genera `_Detalle.pdf` y `_Resumen.pdf` en la carpeta del libro y abre automáticamente el Detalle. Los respaldos y PDFs generados se guardan en `Respaldos/` y no forman parte de Git.
+
 ---
 
 ## Índice
@@ -16,7 +54,7 @@ Guía paso a paso para instalar y usar las macros de:
 - [0. Antes de empezar (requisitos)](#0-antes-de-empezar-requisitos)
 - [1. Habilitar macros y la pestaña Programador](#1-habilitar-macros-y-la-pestaña-programador)
 - [2. Abrir el editor de VBA](#2-abrir-el-editor-de-vba)
-- [3. Importar los 4 módulos](#3-importar-los-4-módulos)
+- [3. Importar los módulos actuales](#3-importar-los-módulos-actuales)
 - [4. Pegar el código de EVENTOS (paso delicado)](#4-pegar-el-código-de-eventos-paso-delicado)
 - [5. Crear los botones en la hoja](#5-crear-los-botones-en-la-hoja)
 - [6. Uso diario](#6-uso-diario)
@@ -95,34 +133,25 @@ VBAProject (Plantilla Cotización AE 1.xlsm)
 
 ---
 
-## 3. Importar los 4 módulos
+## 3. Importar los módulos actuales
 
-Repite esto **una vez por cada archivo** de la lista de abajo:
+Para la versión actual, importa los módulos desde la carpeta `bas/`:
 
-1. En el editor VBA, menú **`Archivo > Importar archivo...`**
-   (o clic derecho sobre `VBAProject` > **Importar archivo...**).
-2. Navega a la carpeta `azteca_estudios_macro` y selecciona el archivo.
-3. Clic en **Abrir**.
+1. `macro_generadora_uuid.bas` → `M_GeneradorUUID`
+2. `asignar_uuid_cotizacion.bas` → `M_UUID`
+3. `esquema_categorias.bas` → `M_Esquema`
+4. `generar_pdfs_resumen_detalle.bas` → `M_PDF`
+5. `blindaje_botones.bas` → `M_Blindaje`
+6. `M_BasePlantilla.bas` → `M_BasePlantilla`
+7. `M_Producto.bas` → `M_Producto`
+8. `M_Catalogos.bas` → `M_Catalogos`
+9. `M_Recalculo.bas` → `M_Recalculo`
 
-Importa **en este orden** (no es obligatorio, pero es lo más claro):
+Repite **`Archivo > Importar archivo...`** una vez por cada `.bas`.
 
-1. `macro_generadora_uuid.vb`
-2. `asignar_uuid_cotizacion.vb`
-3. `esquema_categorias.vb`
-4. `generar_pdfs_resumen_detalle.vb`
+> Los módulos legacy `Módulo1` a `Módulo10` ya existen en el libro. No los elimines: contienen `suma`, `AgregarFilaFecha`, `DuplicarBloque` y `BorrarFilaSeleccionada`.
 
-Al terminar, en la carpeta **Módulos** del Explorador deberías ver los 4:
-
-```
-└── 📁 Módulos
-     ├── macro_generadora_uuid
-     ├── asignar_uuid_cotizacion
-     ├── esquema_categorias
-     └── generar_pdfs_resumen_detalle
-```
-
-> ⚠️ **NO importes `eventos_uuid.vb`.** Ese archivo es solo una referencia; su
-> contenido se pega a mano en el paso 4.
+> ⚠️ **NO importes `eventos_uuid.vb`.** Su contenido se pega a mano en `ThisWorkbook` y en la hoja `Cotización` (paso 4).
 
 ---
 

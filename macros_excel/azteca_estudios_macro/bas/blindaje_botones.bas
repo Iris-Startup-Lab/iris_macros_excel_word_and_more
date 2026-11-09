@@ -41,6 +41,12 @@ Private Const COL_REG As String = "D"
 Private Const FILA_REG As Long = 1
 Private Const TOLERANCIA As Double = 0.5      ' puntos; por debajo de esto no se toca nada
 
+' Los controles temporales del catálogo (TMP_...) no son botones del panel:
+' se ignoran al registrar posiciones y al buscar duplicados.
+Private Function EsObjetoTemporal(ByVal sh As Shape) As Boolean
+    EsObjetoTemporal = (InStr(1, sh.Name, "TMP_", vbTextCompare) = 1)
+End Function
+
 
 ' ============================================================
 '  1) ANCLAJE Y POSICIÓN DE LOS BOTONES
@@ -102,13 +108,15 @@ Public Sub GuardarPosicionesBotones()
 
     r = FILA_REG
     For Each sh In ws.Shapes
-        meta.Cells(r, COL_REG).Value = sh.Name
-        meta.Cells(r, "E").Value = sh.Left
-        meta.Cells(r, "F").Value = sh.Top
-        meta.Cells(r, "G").Value = sh.Width
-        meta.Cells(r, "H").Value = sh.Height
-        r = r + 1
-        n = n + 1
+        If Not EsObjetoTemporal(sh) Then
+            meta.Cells(r, COL_REG).Value = sh.Name
+            meta.Cells(r, "E").Value = sh.Left
+            meta.Cells(r, "F").Value = sh.Top
+            meta.Cells(r, "G").Value = sh.Width
+            meta.Cells(r, "H").Value = sh.Height
+            r = r + 1
+            n = n + 1
+        End If
     Next sh
 
     MsgBox n & " objeto(s) registrados en su posición actual." & vbCrLf & vbCrLf & _
@@ -228,9 +236,11 @@ Public Sub LimpiarBotonesDuplicados()
     End If
 
     For Each sh In ws.Shapes
-        If Not reg.Exists(sh.Name) Then
-            n = n + 1
-            lista = lista & vbCrLf & "  - " & sh.Name
+        If Not EsObjetoTemporal(sh) Then
+            If Not reg.Exists(sh.Name) Then
+                n = n + 1
+                lista = lista & vbCrLf & "  - " & sh.Name
+            End If
         End If
     Next sh
 
@@ -247,7 +257,9 @@ Public Sub LimpiarBotonesDuplicados()
     DesbloquearBotones ws
     On Error Resume Next
     For r = ws.Shapes.Count To 1 Step -1
-        If Not reg.Exists(ws.Shapes(r).Name) Then ws.Shapes(r).Delete
+        If Not EsObjetoTemporal(ws.Shapes(r)) Then
+            If Not reg.Exists(ws.Shapes(r).Name) Then ws.Shapes(r).Delete
+        End If
     Next r
     On Error GoTo 0
     BloquearBotones ws

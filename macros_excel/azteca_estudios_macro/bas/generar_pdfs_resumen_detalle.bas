@@ -16,8 +16,13 @@ Attribute VB_Name = "M_PDF"
 
 Option Explicit
 
+Public Function VersionMPDF() As String
+    VersionMPDF = "2026-11-07-ABRE-DETALLE-FIX"
+End Function
+
 Public Sub GenerarPDFsCotizacion()
     Dim ws As Worksheet
+    Dim i As Long
     Set ws = HojaCotizacion()
     If ws Is Nothing Then
         MsgBox "No se encontró la hoja de Cotización.", vbCritical, "Error"
@@ -30,6 +35,17 @@ Public Sub GenerarPDFsCotizacion()
                "(Archivo > Guardar como...)", vbExclamation, "Libro no guardado"
         Exit Sub
     End If
+
+    ' Eliminar cualquier combo temporal del catálogo antes de exportar
+    On Error Resume Next
+    DesbloquearBotones ws
+    For i = ws.Shapes.Count To 1 Step -1
+        If InStr(1, ws.Shapes(i).Name, "TMP_Catalogo", vbTextCompare) > 0 Then
+            ws.Shapes(i).Delete
+        End If
+    Next i
+    BloquearBotones ws
+    On Error GoTo 0
 
     ' Garantiza que el UUID (K4) esté asignado y sea consistente con el proyecto
     AsegurarUUIDCotizacion
@@ -66,7 +82,7 @@ Public Sub GenerarPDFsCotizacion()
     If Len(version) > 0 Then baseNombre = baseNombre & "_v" & version
     If Len(fechaCot) > 0 Then baseNombre = baseNombre & "_" & fechaCot
 
-    Dim ultima As Long, i As Long
+    Dim ultima As Long
     ultima = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
 
     ' Guardamos el estado de colapso ACTUAL del usuario (lo que dejó oculto a
@@ -98,18 +114,19 @@ Public Sub GenerarPDFsCotizacion()
     ResaltarDetalle
     Application.ScreenUpdating = True
 
-    Dim respAbrir As VbMsgBoxResult
-    respAbrir = MsgBox("PDFs generados exitosamente en la carpeta del libro:" & vbCrLf & vbCrLf & _
-                       "  • " & baseNombre & "_Detalle.pdf" & vbCrLf & _
-                       "  • " & baseNombre & "_Resumen.pdf" & vbCrLf & vbCrLf & _
-                       "ID Cotización (UUID): " & uuid & vbCrLf & vbCrLf & _
-                       "¿Deseas abrir la carpeta con los PDFs generados ahora?", vbYesNo + vbInformation, "Exportación Dual Exitosa")
+    MsgBox "PDFs generados exitosamente en la carpeta del libro:" & vbCrLf & vbCrLf & _
+           "  " & baseNombre & "_Detalle.pdf" & vbCrLf & _
+           "  " & baseNombre & "_Resumen.pdf" & vbCrLf & vbCrLf & _
+           "ID Cotización (UUID): " & uuid & vbCrLf & vbCrLf & _
+           "Se abrirá el PDF de Detalle.", vbInformation, "Exportación Dual Exitosa"
 
-    If respAbrir = vbYes Then
-        On Error Resume Next
-        Shell "explorer.exe /select,""" & ruta & baseNombre & "_Detalle.pdf" & """", vbNormalFocus
-        On Error GoTo 0
+    On Error Resume Next
+    ThisWorkbook.FollowHyperlink ruta & baseNombre & "_Detalle.pdf"
+    If Err.Number <> 0 Then
+        Err.Clear
+        Shell "explorer.exe /select,""" & ruta & baseNombre & "_Detalle.pdf""", vbNormalFocus
     End If
+    On Error GoTo 0
     Exit Sub
 
 FinalizarConError:
@@ -122,7 +139,15 @@ FinalizarConError:
 End Sub
 
 Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As Boolean
+    Dim formatoA1 As String
+    Dim numError As Long, descError As String
+
     On Error Resume Next
+    ' Ocultar temporalmente el aviso "Esta es una plantilla" en A1 para que no salga en el PDF
+    formatoA1 = ws.Range("A1").NumberFormat
+    ws.Range("A1").NumberFormat = ";;;"
+    Err.Clear
+
     ws.ExportAsFixedFormat _
         Type:=xlTypePDF, _
         Filename:=archivo, _
@@ -130,12 +155,14 @@ Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As 
         IgnorePrintAreas:=False, _
         OpenAfterPublish:=False
 
-    If Err.Number <> 0 Then
-        Dim numError As Long, descError As String
-        numError = Err.Number
-        descError = Err.Description
-        On Error GoTo 0
+    numError = Err.Number
+    descError = Err.Description
 
+    ' Restaurar siempre la visibilidad del texto en A1
+    ws.Range("A1").NumberFormat = formatoA1
+    On Error GoTo 0
+
+    If numError <> 0 Then
         If numError = 1004 Then
             MsgBox "No se pudo generar el archivo PDF porque ya se encuentra abierto en otro programa " & _
                    "(como Adobe Acrobat o su navegador web):" & vbCrLf & vbCrLf & _
@@ -148,7 +175,6 @@ Private Function ExportarPDF(ByVal ws As Worksheet, ByVal archivo As String) As 
         ExportarPDF = False
         Exit Function
     End If
-    On Error GoTo 0
     ExportarPDF = True
 End Function
 

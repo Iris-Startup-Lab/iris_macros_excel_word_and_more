@@ -23,4 +23,6 @@ Sub AgregarFilaFecha()
 
     RestaurarPosicionesBotones
 
+    Cells(filaDestino, "A").Select
+
 End Sub
