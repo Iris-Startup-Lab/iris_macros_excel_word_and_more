@@ -429,10 +429,19 @@ End Function
 ' un concepto CONTUVIERA "SUMA" ("Consumables") o "ITEM" para bloquearlo.
 Public Function EsFilaEstructural(ByVal ws As Worksheet, ByVal fila As Long) As Boolean
     Dim t As String
+    Dim ma As Range
+
     t = NormalizarRotulo(ws.Cells(fila, "A").Value)
 
     If t = "SUMATOTAL" Then EsFilaEstructural = True: Exit Function
-    If ws.Cells(fila, "A").MergeArea.Columns.Count > 1 Then EsFilaEstructural = True: Exit Function
+
+    Set ma = ws.Cells(fila, "A").MergeArea
+    If ma.Columns.Count >= 10 Or _
+       (ma.Rows.Count >= 2 And ma.Columns.Count >= 6) Then
+        EsFilaEstructural = True
+        Exit Function
+    End If
+
     If Left$(t, 7) = "DESCRIP" Or Left$(t, 6) = "PRECIO" Or _
        Left$(t, 8) = "CANTIDAD" Or t = "ITEM" Or t = "ITEMS" Then
         EsFilaEstructural = True
@@ -504,4 +513,8 @@ Public Sub RegistrarError(ByVal origen As String, ByVal numero As Long, ByVal de
     End If
     Application.EnableEvents = eventos
 End Sub
+
+Public Function VersionMBlindaje() As String
+    VersionMBlindaje = "2026-11-13-FIX-BORRAR-FILA"
+End Function
 

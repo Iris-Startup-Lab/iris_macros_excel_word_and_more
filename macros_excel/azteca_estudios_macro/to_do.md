@@ -1,5 +1,18 @@
 # Registro de Tareas y Cambios — Azteca Estudios Macro
 
+## [2026-11-13] Corrección — EsFilaEstructural bloqueaba producto, fecha y foro
+
+- **Problema:** el botón **Borrar fila** mostraba “No se puede borrar una fila de SUMA, de encabezado o título de categoría” para productos, fechas y foros.
+- **Causa:** `EsFilaEstructural` marcaba como estructural cualquier fila con más de una columna combinada. Los conceptos usan `A:F` combinado, así que `Columns.Count` devolvía 6.
+- **Corrección:** ahora solo se consideran encabezados de categoría las combinaciones `A:N` o las que abarcan varias filas. Se conservan las validaciones por texto para `SUMA TOTAL`, `DESCRIPCIÓN`, `PRECIO`, `CANTIDAD` e `ITEM`.
+- **Verificación:** `VersionMBlindaje = 2026-11-13-FIX-BORRAR-FILA`.
+- **Corrección adicional:** `VersionMBlindaje` se movió al final del módulo para no interrumpir las declaraciones de nivel de módulo.
+- **Archivos actualizados:**
+  - `blindaje_botones.vb`
+  - `bas/blindaje_botones.bas`
+  - `to_do.md`
+- **Pendiente:** importar `M_Blindaje`, compilar y probar borrado de producto, fecha y foro; confirmar bloqueo de encabezados y totales.
+
 ## [2026-11-09] Documentación — Actualización de autorías según los últimos 6 diffs
 
 - **Propósito:** incorporar y regularizar la autoría de Fernando Dorantes Nieto y Diana Berumen Estrada en todos los módulos y macros modificados o creados en los últimos 6 diffs/commits de Git.
